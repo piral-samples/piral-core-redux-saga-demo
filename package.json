@@ -1,0 +1,53 @@
+{
+  "name": "sample-piral-core",
+  "private": true,
+  "version": "0.11.5",
+  "description": "Example project illustrating the use of the piral-core and piral-cli packages.",
+  "keywords": [
+    "portal",
+    "smapiot",
+    "modules",
+    "spa"
+  ],
+  "author": "smapiot",
+  "homepage": "https://piral.io",
+  "license": "MIT",
+  "main": "src/index.html",
+  "files": [],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smapiot/piral.git"
+  },
+  "bugs": {
+    "url": "https://github.com/smapiot/piral/issues"
+  },
+  "app": "src/index.html",
+  "dependencies": {
+    "piral-containers": "^0.11.5",
+    "piral-core": "^0.11.5",
+    "piral-dashboard": "^0.11.5",
+    "piral-feeds": "^0.11.5",
+    "piral-forms": "^0.11.5",
+    "piral-menu": "^0.11.5",
+    "piral-notifications": "^0.11.5",
+    "piral-search": "^0.11.5",
+    "react": "^16.8.1",
+    "react-dom": "^16.8.1",
+    "react-router": ">=5.0.0",
+    "react-router-dom": ">=5.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^16.8.2",
+    "@types/react-dom": "^16.8.0",
+    "@types/react-router": "^5.0.0",
+    "@types/react-router-dom": "latest",
+    "piral-cli": "^0.11.5",
+    "piral-cli-parcel": "^0.11.5",
+    "sass": "^1.17.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: run tests from root\" && exit 1",
+    "build": "tsc && piral build --fresh src/index.html",
+    "start": "piral debug --port 3000 src/index.html"
+  }
+}
