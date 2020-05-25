@@ -28779,7 +28779,2028 @@ if ("development" === 'production') {
 } else {
   module.exports = require('./cjs/react-dom.development.js');
 }
-},{"./cjs/react-dom.development.js":"../node_modules/react-dom/cjs/react-dom.development.js"}],"../node_modules/@babel/runtime/helpers/esm/inheritsLoose.js":[function(require,module,exports) {
+},{"./cjs/react-dom.development.js":"../node_modules/react-dom/cjs/react-dom.development.js"}],"../node_modules/piral-base/lib/utils.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var tslib_1 = require("tslib");
+
+var defaultGlobalDependencies = {};
+
+var defaultGetDependencies = function defaultGetDependencies() {
+  return false;
+};
+
+function isfunc(f) {
+  return typeof f === 'function';
+}
+
+exports.isfunc = isfunc;
+
+function createEmptyModule(meta) {
+  return tslib_1.__assign(tslib_1.__assign({}, meta), {
+    setup: function setup() {}
+  });
+}
+
+exports.createEmptyModule = createEmptyModule;
+
+function getDependencyResolver(globalDependencies, getLocalDependencies) {
+  if (globalDependencies === void 0) {
+    globalDependencies = defaultGlobalDependencies;
+  }
+
+  if (getLocalDependencies === void 0) {
+    getLocalDependencies = defaultGetDependencies;
+  }
+
+  return function (target) {
+    return getLocalDependencies(target) || globalDependencies;
+  };
+}
+
+exports.getDependencyResolver = getDependencyResolver;
+},{"tslib":"../node_modules/tslib/tslib.es6.js"}],"../node_modules/piral-base/lib/fetch.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+/**
+ * Uses the `fetch` function (must be available). If you
+ * use this function make sure to use, e.g., `whatwg-fetch`
+ * which comes with polyfills for older browsers.
+ * @param url The URL to GET.
+ * @returns A promise leading to the raw text content.
+ */
+
+function defaultFetchDependency(url) {
+  return fetch(url, {
+    method: 'GET',
+    cache: 'force-cache'
+  }).then(function (m) {
+    return m.text();
+  });
+}
+
+exports.defaultFetchDependency = defaultFetchDependency;
+},{}],"../node_modules/piral-base/lib/dependency.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+function requireModule(name, dependencies) {
+  var dependency = dependencies[name];
+
+  if (!dependency) {
+    var error = new Error("Cannot find module '" + name + "'");
+    error.code = 'MODULE_NOT_FOUND';
+    throw error;
+  }
+
+  return dependency;
+}
+
+function checkPiletApp(name, app) {
+  if (!app) {
+    console.error('Invalid module found.', name);
+  } else if (typeof app.setup !== 'function') {
+    console.warn('Setup function is missing.', name);
+  } else {
+    return app;
+  }
+
+  return {
+    setup: function setup() {}
+  };
+}
+
+function checkPiletAppAsync(name, app) {
+  return Promise.resolve(app).then(function (resolvedApp) {
+    return checkPiletApp(name, resolvedApp);
+  });
+}
+
+function getLocalRequire(dependencies) {
+  if (dependencies === void 0) {
+    dependencies = {};
+  }
+
+  return function (moduleName) {
+    return requireModule(moduleName, dependencies);
+  };
+}
+/**
+ * Compiles the given content from a generic dependency.
+ * @param name The name of the dependency to compile.
+ * @param content The content of the dependency to compile.
+ * @param link The optional link to the dependency.
+ * @param dependencies The globally available dependencies.
+ * @returns The evaluated dependency.
+ */
+
+
+function evalDependency(name, content, link, dependencies) {
+  if (link === void 0) {
+    link = '';
+  }
+
+  var mod = {
+    exports: {}
+  };
+
+  var require = getLocalRequire(dependencies);
+
+  try {
+    var sourceUrl = link && "\n//# sourceURL=" + link;
+    var importer = new Function('module', 'exports', 'require', content + sourceUrl);
+    importer(mod, mod.exports, require);
+  } catch (e) {
+    console.error("Error while evaluating " + name + ".", e);
+  }
+
+  return mod.exports;
+}
+
+exports.evalDependency = evalDependency;
+/**
+ * Compiles the given content from a module with a dependency resolution.
+ * @param name The name of the dependency to compile.
+ * @param content The content of the dependency to compile.
+ * @param link The optional link to the dependency.
+ * @param dependencies The globally available dependencies.
+ * @returns The evaluated module.
+ */
+
+function compileDependency(name, content, link, dependencies) {
+  if (link === void 0) {
+    link = '';
+  }
+
+  var app = evalDependency(name, content, link, dependencies);
+  return checkPiletAppAsync(name, app);
+}
+
+exports.compileDependency = compileDependency;
+/**
+ * Includes the given script via its URL with a dependency resolution.
+ * @param meta The meta data of the dependency to include.
+ * @param dependencies The globally available dependencies.
+ * @returns The evaluated module.
+ */
+
+function includeDependency(meta, dependencies) {
+  return new Promise(function (resolve) {
+    var rr = meta.requireRef;
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = meta.link;
+
+    if (meta.integrity) {
+      s.integrity = meta.integrity;
+    }
+
+    window[rr] = getLocalRequire(dependencies);
+
+    s.onload = function () {
+      return resolve(checkPiletAppAsync(meta.name, s.app));
+    };
+
+    s.onerror = function () {
+      return resolve(checkPiletApp(meta.name));
+    };
+
+    document.body.appendChild(s);
+  });
+}
+
+exports.includeDependency = includeDependency;
+},{}],"../node_modules/piral-base/lib/load.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var tslib_1 = require("tslib");
+
+var utils_1 = require("./utils");
+
+var fetch_1 = require("./fetch");
+
+var dependency_1 = require("./dependency");
+
+function loadFrom(meta, getDependencies, loader) {
+  var dependencies = tslib_1.__assign({}, getDependencies(meta) || {});
+
+  return loader(dependencies).then(function (app) {
+    return tslib_1.__assign(tslib_1.__assign({}, app), meta);
+  });
+}
+
+function checkFetchPilets(fetchPilets) {
+  if (!utils_1.isfunc(fetchPilets)) {
+    console.error('Could not get the pilets. Provide a valid `fetchPilets` function.');
+    return false;
+  }
+
+  return true;
+}
+/**
+ * Loads the given raw pilet content by resolving its dependencies and
+ * evaluating the content.
+ * @param meta The raw pilet content as received from the server.
+ * @param fetchDependency The function to resolve a dependency.
+ * @param dependencies The already evaluated global dependencies.
+ * @returns A promise leading to the pilet content which has the metadata and a `setup` function.
+ */
+
+
+function loadPilet(meta, getDependencies, fetchDependency) {
+  if (fetchDependency === void 0) {
+    fetchDependency = fetch_1.defaultFetchDependency;
+  }
+
+  if ('requireRef' in meta) {
+    return loadFrom(meta, getDependencies, function (deps) {
+      return dependency_1.includeDependency(meta, deps);
+    });
+  }
+
+  var name = meta.name,
+      link = meta.link,
+      content = meta.content;
+
+  if (link) {
+    return fetchDependency(link).then(function (content) {
+      return loadFrom(meta, getDependencies, function (deps) {
+        return dependency_1.compileDependency(name, content, link, deps);
+      });
+    });
+  } else if (content) {
+    return loadFrom(meta, getDependencies, function (deps) {
+      return dependency_1.compileDependency(name, content, link, deps);
+    });
+  } else {
+    console.warn('Empty pilet found!', name);
+  }
+
+  return Promise.resolve(utils_1.createEmptyModule(meta));
+}
+
+exports.loadPilet = loadPilet;
+/**
+ * Loads the pilets metadata and puts them in the cache, if provided.
+ * @param fetchPilets The function to resolve the pilets.
+ * @param cache The optional cache to use initially and update later.
+ */
+
+function loadMetadata(fetchPilets) {
+  if (checkFetchPilets(fetchPilets)) {
+    return fetchPilets();
+  }
+
+  return Promise.resolve([]);
+}
+
+exports.loadMetadata = loadMetadata;
+/**
+ * Loads the pilets by first getting them, then evaluating the raw content.
+ * @param fetchPilets The function to resolve the pilets.
+ * @param fetchDependency A function to fetch the dependencies. By default, `fetch` is used.
+ * @param dependencies The availablly global dependencies, if any.
+ * @returns A promise leading to the evaluated pilets.
+ */
+
+function loadPilets(fetchPilets, fetchDependency, globalDependencies, getLocalDependencies, integrity) {
+  var getDependencies = utils_1.getDependencyResolver(globalDependencies, getLocalDependencies);
+  return loadMetadata(fetchPilets).then(function (pilets) {
+    return Promise.all(pilets.map(function (m) {
+      return loadPilet(m, getDependencies, fetchDependency);
+    }));
+  });
+}
+
+exports.loadPilets = loadPilets;
+},{"tslib":"../node_modules/tslib/tslib.es6.js","./utils":"../node_modules/piral-base/lib/utils.js","./fetch":"../node_modules/piral-base/lib/fetch.js","./dependency":"../node_modules/piral-base/lib/dependency.js"}],"../node_modules/piral-base/lib/setup.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+/**
+ * Sets up the given pilet by calling the exported `setup` function
+ * on the pilet.
+ * @param app The pilet's evaluated content.
+ * @param api The generated API for the pilet.
+ */
+
+function setupPilet(app, api) {
+  try {
+    return app.setup(api);
+  } catch (e) {
+    console.error("Error while setting up " + (app && app.name) + ".", e);
+  }
+}
+
+exports.setupPilet = setupPilet;
+},{}],"../node_modules/piral-base/lib/aggregate.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var utils_1 = require("./utils");
+
+var setup_1 = require("./setup");
+
+function checkCreateApi(createApi) {
+  if (!utils_1.isfunc(createApi)) {
+    console.warn('Invalid `createApi` function. Skipping pilet installation.');
+    return false;
+  }
+
+  return true;
+}
+/**
+ * Sets up the evaluated pilets to become integrated pilets.
+ * @param createApi The function to create an API object for a pilet.
+ * @param pilets The available evaluated app pilets.
+ * @returns The integrated pilets.
+ */
+
+
+function createPilets(createApi, pilets) {
+  var promises = [];
+
+  if (checkCreateApi(createApi)) {
+    for (var _i = 0, pilets_1 = pilets; _i < pilets_1.length; _i++) {
+      var pilet = pilets_1[_i];
+      var api = createApi(pilet);
+      promises.push(setup_1.setupPilet(pilet, api));
+    }
+  }
+
+  return Promise.all(promises).then(function () {
+    return pilets;
+  });
+}
+
+exports.createPilets = createPilets;
+/**
+ * Sets up an evaluated pilet to become an integrated pilet.
+ * @param createApi The function to create an API object for the pilet.
+ * @param pilet The available evaluated pilet.
+ * @returns The integrated pilet.
+ */
+
+function createPilet(createApi, pilet) {
+  var promises = [];
+
+  if (checkCreateApi(createApi)) {
+    var api = createApi(pilet);
+    promises.push(setup_1.setupPilet(pilet, api));
+  }
+
+  return Promise.all(promises).then(function () {
+    return pilet;
+  });
+}
+
+exports.createPilet = createPilet;
+},{"./utils":"../node_modules/piral-base/lib/utils.js","./setup":"../node_modules/piral-base/lib/setup.js"}],"../node_modules/piral-base/lib/strategies.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var tslib_1 = require("tslib");
+
+var utils_1 = require("./utils");
+
+var load_1 = require("./load");
+
+var aggregate_1 = require("./aggregate");
+
+function evalAll(createApi, oldModules, newModules) {
+  var _loop_1 = function _loop_1(oldModule) {
+    var newModule = newModules.filter(function (m) {
+      return m.name === oldModule.name;
+    })[0];
+
+    if (newModule) {
+      newModules.splice(newModules.indexOf(newModule), 1);
+    }
+  };
+
+  for (var _i = 0, oldModules_1 = oldModules; _i < oldModules_1.length; _i++) {
+    var oldModule = oldModules_1[_i];
+
+    _loop_1(oldModule);
+  }
+
+  return aggregate_1.createPilets(createApi, tslib_1.__spreadArrays(oldModules, newModules));
+}
+/**
+ * This strategy is dependent on the async parameter. If false it will start rendering when
+ * everything has been received, otherwise it will start rendering when the metadata has been
+ * received. In any case it will evaluate pilets as fast as possible.
+ * @param async Uses the asynchronous mode.
+ */
+
+
+function createProgressiveStrategy(async) {
+  return function (options, cb) {
+    var fetchPilets = options.fetchPilets,
+        fetchDependency = options.fetchDependency,
+        dependencies = options.dependencies,
+        getDependencies = options.getDependencies,
+        createApi = options.createApi,
+        _a = options.pilets,
+        pilets = _a === void 0 ? [] : _a;
+    var getDep = utils_1.getDependencyResolver(dependencies, getDependencies);
+    var loader = load_1.loadMetadata(fetchPilets);
+    return aggregate_1.createPilets(createApi, pilets).then(function (allModules) {
+      if (async && allModules.length > 0) {
+        cb(undefined, allModules);
+      }
+
+      var followUp = loader.then(function (metadata) {
+        var promises = metadata.map(function (m) {
+          return load_1.loadPilet(m, getDep, fetchDependency).then(function (mod) {
+            var available = pilets.filter(function (m) {
+              return m.name === mod.name;
+            }).length === 0;
+
+            if (available) {
+              return aggregate_1.createPilet(createApi, mod).then(function (newModule) {
+                allModules.push(newModule);
+
+                if (async) {
+                  cb(undefined, allModules);
+                }
+              });
+            }
+          });
+        });
+        return Promise.all(promises).then(function () {
+          if (!async) {
+            cb(undefined, allModules);
+          }
+        });
+      });
+      return async ? loader.then() : followUp.then();
+    });
+  };
+}
+
+exports.createProgressiveStrategy = createProgressiveStrategy;
+/**
+ * This strategy starts rendering when the pilets metadata has been received.
+ * Evaluates the pilets once available without waiting for all pilets to be
+ * available.
+ */
+
+function blazingStrategy(options, cb) {
+  var strategy = createProgressiveStrategy(true);
+  return strategy(options, cb);
+}
+
+exports.blazingStrategy = blazingStrategy;
+/**
+ * The async strategy picked when no strategy is declared and async is set to
+ * true. Directly renders, but waits for all pilets to be available before
+ * evaluating them.
+ */
+
+function asyncStrategy(options, cb) {
+  standardStrategy(options, cb);
+  return Promise.resolve();
+}
+
+exports.asyncStrategy = asyncStrategy;
+/**
+ * The standard strategy that is used if no strategy is declared and async is
+ * false. Loads and evaluates all pilets before rendering.
+ */
+
+function standardStrategy(options, cb) {
+  var fetchPilets = options.fetchPilets,
+      fetchDependency = options.fetchDependency,
+      dependencies = options.dependencies,
+      getDependencies = options.getDependencies,
+      createApi = options.createApi,
+      _a = options.pilets,
+      pilets = _a === void 0 ? [] : _a;
+  return load_1.loadPilets(fetchPilets, fetchDependency, dependencies, getDependencies).then(function (newModules) {
+    return evalAll(createApi, pilets, newModules);
+  }).then(function (modules) {
+    return cb(undefined, modules);
+  }).catch(function (error) {
+    return cb(error, []);
+  });
+}
+
+exports.standardStrategy = standardStrategy;
+/**
+ * The strategy that could be used for special purposes, e.g., SSR or specific
+ * builds of the Piral instance. This strategy ignores the fetcher and only
+ * considers the already given pilets.
+ */
+
+function syncStrategy(options, cb) {
+  var createApi = options.createApi,
+      _a = options.pilets,
+      pilets = _a === void 0 ? [] : _a;
+  return evalAll(createApi, pilets, []).then(function (modules) {
+    return cb(undefined, modules);
+  }, function (err) {
+    return cb(err, []);
+  });
+}
+
+exports.syncStrategy = syncStrategy;
+},{"tslib":"../node_modules/tslib/tslib.es6.js","./utils":"../node_modules/piral-base/lib/utils.js","./load":"../node_modules/piral-base/lib/load.js","./aggregate":"../node_modules/piral-base/lib/aggregate.js"}],"../node_modules/piral-base/lib/create.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var utils_1 = require("./utils");
+
+var strategies_1 = require("./strategies");
+
+function startLoadingPilets(options) {
+  var state = {
+    loaded: false,
+    pilets: [],
+    error: undefined
+  };
+  var notifiers = [];
+
+  var call = function call(notifier) {
+    return notifier(state.error, state.pilets, state.loaded);
+  };
+
+  var notify = function notify() {
+    return notifiers.forEach(call);
+  };
+
+  var setPilets = function setPilets(error, pilets) {
+    state.error = error;
+    state.pilets = pilets;
+    notify();
+  };
+
+  var setLoaded = function setLoaded() {
+    state.loaded = true;
+    notify();
+  };
+
+  var _a = options.strategy,
+      strategy = _a === void 0 ? strategies_1.standardStrategy : _a;
+  strategy(options, setPilets).then(setLoaded, setLoaded);
+  return {
+    connect: function connect(notifier) {
+      if (utils_1.isfunc(notifier)) {
+        notifiers.push(notifier);
+        call(notifier);
+      }
+    },
+    disconnect: function disconnect(notifier) {
+      var index = notifiers.indexOf(notifier);
+      index !== -1 && notifiers.splice(index, 1);
+    }
+  };
+}
+
+exports.startLoadingPilets = startLoadingPilets;
+},{"./utils":"../node_modules/piral-base/lib/utils.js","./strategies":"../node_modules/piral-base/lib/strategies.js"}],"../node_modules/piral-base/lib/index.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var tslib_1 = require("tslib");
+
+tslib_1.__exportStar(require("./create"), exports);
+
+tslib_1.__exportStar(require("./load"), exports);
+
+tslib_1.__exportStar(require("./strategies"), exports);
+
+tslib_1.__exportStar(require("./utils"), exports);
+},{"tslib":"../node_modules/tslib/tslib.es6.js","./create":"../node_modules/piral-base/lib/create.js","./load":"../node_modules/piral-base/lib/load.js","./strategies":"../node_modules/piral-base/lib/strategies.js","./utils":"../node_modules/piral-base/lib/utils.js"}],"../node_modules/piral-core/lib/utils/compare.js":[function(require,module,exports) {
+"use strict";
+
+function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+function compareObjects(a, b) {
+  for (var i in a) {
+    if (!(i in b)) {
+      return false;
+    }
+  }
+
+  for (var i in b) {
+    if (!compare(a[i], b[i])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function compare(a, b) {
+  if (a !== b) {
+    var ta = _typeof(a);
+
+    var tb = _typeof(b);
+
+    if (ta === tb && ta === 'object' && a && b) {
+      return compareObjects(a, b);
+    }
+
+    return false;
+  }
+
+  return true;
+}
+
+exports.compare = compare;
+},{}],"../node_modules/piral-core/lib/utils/data.js":[function(require,module,exports) {
+"use strict";
+
+function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+var defaultTarget = 'memory';
+
+function createDataView(data) {
+  var proxyName = 'Proxy';
+  return window[proxyName] && new Proxy(data, {
+    get: function get(target, name) {
+      var item = target[name];
+      return item && item.value;
+    },
+    set: function set(_target, _name, _value) {
+      return true;
+    }
+  });
+}
+
+exports.createDataView = createDataView;
+
+function createDataOptions(options) {
+  if (options === void 0) {
+    options = defaultTarget;
+  }
+
+  if (typeof options === 'string') {
+    return {
+      target: options
+    };
+  } else if (options && _typeof(options) === 'object' && !Array.isArray(options)) {
+    return options;
+  } else {
+    return {
+      target: defaultTarget
+    };
+  }
+}
+
+exports.createDataOptions = createDataOptions;
+
+function getDataExpiration(expires) {
+  if (typeof expires === 'number') {
+    return expires;
+  } else if (expires instanceof Date) {
+    return expires.valueOf();
+  }
+
+  return -1;
+}
+
+exports.getDataExpiration = getDataExpiration;
+},{}],"../node_modules/piral-core/lib/utils/events.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+function nameOf(type) {
+  return "piral-" + type;
+}
+
+function createListener(state) {
+  var eventListeners = [];
+  return {
+    on: function on(type, callback) {
+      var listener = function listener(_a) {
+        var detail = _a.detail;
+        return detail && detail.state === state && callback(detail.arg);
+      };
+
+      document.body.addEventListener(nameOf(type), listener);
+      eventListeners.push([callback, listener]);
+      return this;
+    },
+    off: function off(type, callback) {
+      var listener = eventListeners.filter(function (m) {
+        return m[0] === callback;
+      })[0];
+
+      if (listener) {
+        document.body.removeEventListener(nameOf(type), listener[1]);
+        eventListeners.splice(eventListeners.indexOf(listener), 1);
+      }
+
+      return this;
+    },
+    emit: function emit(type, arg) {
+      var ce = document.createEvent('CustomEvent');
+      ce.initCustomEvent(nameOf(type), false, false, {
+        arg: arg,
+        state: state
+      });
+      document.body.dispatchEvent(ce);
+      return this;
+    }
+  };
+}
+
+exports.createListener = createListener;
+},{}],"../node_modules/piral-core/lib/utils/foreign.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var react_1 = require("react");
+
+var react_dom_1 = require("react-dom");
+
+function convertComponent(converter, component) {
+  if (typeof converter !== 'function') {
+    throw new Error("No converter for component of type \"" + component.type + "\" registered.");
+  }
+
+  return converter(component);
+}
+
+exports.convertComponent = convertComponent;
+
+function renderInDom(context, element, component, props) {
+  var portalId = 'data-portal-id';
+  var parent = element;
+
+  while (parent) {
+    if (parent instanceof Element && parent.hasAttribute(portalId)) {
+      var portal = react_dom_1.createPortal(react_1.createElement(component, props), element);
+      var id = parent.getAttribute(portalId);
+      context.showPortal(id, portal);
+      return id;
+    }
+
+    parent = parent.parentNode || parent.host;
+  }
+
+  return undefined;
+}
+
+exports.renderInDom = renderInDom;
+},{"react":"../node_modules/react/index.js","react-dom":"../node_modules/react-dom/index.js"}],"../node_modules/piral-core/lib/utils/guid.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+function rand(c) {
+  var r = Math.random() * 16 | 0;
+  var v = c === 'x' ? r : r & 0x3 | 0x8;
+  return v.toString(16);
+}
+
+function generateId() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, rand);
+}
+
+exports.generateId = generateId;
+
+function buildName(prefix, name) {
+  return prefix + "://" + name;
+}
+
+exports.buildName = buildName;
+},{}],"../node_modules/piral-core/lib/utils/helpers.js":[function(require,module,exports) {
+"use strict";
+
+function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var tslib_1 = require("tslib"); // tslint:disable-next-line
+
+
+exports.removeIndicator = null;
+
+function prependItem(items, item) {
+  return tslib_1.__spreadArrays([item], items || []);
+}
+
+exports.prependItem = prependItem;
+
+function appendItem(items, item) {
+  return tslib_1.__spreadArrays(items || [], [item]);
+}
+
+exports.appendItem = appendItem;
+
+function prependItems(items, newItems) {
+  return tslib_1.__spreadArrays(newItems, items || []);
+}
+
+exports.prependItems = prependItems;
+
+function appendItems(items, newItems) {
+  return tslib_1.__spreadArrays(items || [], newItems);
+}
+
+exports.appendItems = appendItems;
+
+function excludeItem(items, item) {
+  return (items || []).filter(function (m) {
+    return m !== item;
+  });
+}
+
+exports.excludeItem = excludeItem;
+
+function includeItem(items, item) {
+  return prependItem(excludeItem(items, item), item);
+}
+
+exports.includeItem = includeItem;
+
+function replaceOrAddItem(items, item, predicate) {
+  var newItems = tslib_1.__spreadArrays(items || []);
+
+  for (var i = 0; i < newItems.length; i++) {
+    if (predicate(newItems[i])) {
+      newItems[i] = item;
+      return newItems;
+    }
+  }
+
+  newItems.push(item);
+  return newItems;
+}
+
+exports.replaceOrAddItem = replaceOrAddItem;
+
+function removeNested(obj, predicate) {
+  return Object.keys(obj).reduce(function (entries, key) {
+    var item = obj[key];
+    entries[key] = Object.keys(item).reduce(function (all, key) {
+      var value = item[key];
+
+      if (Array.isArray(value)) {
+        all[key] = excludeOn(value, predicate);
+      } else if (!value || !predicate(value)) {
+        all[key] = value;
+      }
+
+      return all;
+    }, {});
+    return entries;
+  }, {});
+}
+
+exports.removeNested = removeNested;
+
+function excludeOn(items, predicate) {
+  return (items || []).filter(function (m) {
+    return !predicate(m);
+  });
+}
+
+exports.excludeOn = excludeOn;
+
+function updateKey(obj, key, value) {
+  return value === exports.removeIndicator ? withoutKey(obj, key) : withKey(obj, key, value);
+}
+
+exports.updateKey = updateKey;
+
+function withKey(obj, key, value) {
+  var _a;
+
+  return tslib_1.__assign(tslib_1.__assign({}, obj), (_a = {}, _a[key] = value, _a));
+}
+
+exports.withKey = withKey;
+
+function withoutKey(obj, key) {
+  var _a = obj || {},
+      _b = key,
+      _ = _a[_b],
+      newObj = tslib_1.__rest(_a, [_typeof(_b) === "symbol" ? _b : _b + ""]);
+
+  return newObj;
+}
+
+exports.withoutKey = withoutKey;
+},{"tslib":"../node_modules/tslib/tslib.es6.js"}],"../node_modules/piral-core/lib/utils/media.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.defaultLayouts = ['desktop', 'tablet', 'mobile'];
+exports.defaultBreakpoints = ['(min-width: 991px)', '(min-width: 481px)', '(max-width: 480px)'];
+var mm = typeof window === 'undefined' ? function () {
+  return {
+    matches: []
+  };
+} : function (q) {
+  return window.matchMedia(q);
+};
+
+function getCurrentLayout(breakpoints, layouts, defaultLayout) {
+  var query = breakpoints.findIndex(function (q) {
+    return mm(q).matches;
+  });
+  var layout = layouts[query];
+  return layout !== undefined ? layout : defaultLayout;
+}
+
+exports.getCurrentLayout = getCurrentLayout;
+},{}],"../node_modules/piral-core/lib/utils/react.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var React = require("react");
+
+function defaultRender(children, key) {
+  return React.createElement(React.Fragment, {
+    key: key
+  }, children);
+}
+
+exports.defaultRender = defaultRender;
+},{"react":"../node_modules/react/index.js"}],"../node_modules/piral-core/lib/utils/storage.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+var crx = /\s*(.*?)=(.*?)($|;|,(?! ))/g;
+exports.storage = {
+  setItem: function setItem(name, data) {
+    return localStorage.setItem(name, data);
+  },
+  getItem: function getItem(name) {
+    return localStorage.getItem(name);
+  },
+  removeItem: function removeItem(name) {
+    return localStorage.removeItem(name);
+  }
+};
+exports.cookie = {
+  setItem: function setItem(name, data, expires) {
+    if (expires === void 0) {
+      expires = '';
+    }
+
+    var domain = location.hostname;
+    var domainPart = domain ? "domain=." + domain + ";" : '';
+    document.cookie = name + "=" + encodeURIComponent(data) + ";expires=\"" + expires + "\";path=/;" + domainPart;
+  },
+  getItem: function getItem(name) {
+    return document.cookie.replace(crx, function (_m, p1, p2) {
+      return name === p1 ? p2 : '';
+    });
+  },
+  removeItem: function removeItem(name) {
+    this.setItem(name, '', '-1');
+  }
+};
+},{}],"../node_modules/piral-core/lib/utils/index.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var tslib_1 = require("tslib");
+
+tslib_1.__exportStar(require("./compare"), exports);
+
+tslib_1.__exportStar(require("./data"), exports);
+
+tslib_1.__exportStar(require("./events"), exports);
+
+tslib_1.__exportStar(require("./foreign"), exports);
+
+tslib_1.__exportStar(require("./guid"), exports);
+
+tslib_1.__exportStar(require("./helpers"), exports);
+
+tslib_1.__exportStar(require("./media"), exports);
+
+tslib_1.__exportStar(require("./react"), exports);
+
+tslib_1.__exportStar(require("./storage"), exports);
+},{"tslib":"../node_modules/tslib/tslib.es6.js","./compare":"../node_modules/piral-core/lib/utils/compare.js","./data":"../node_modules/piral-core/lib/utils/data.js","./events":"../node_modules/piral-core/lib/utils/events.js","./foreign":"../node_modules/piral-core/lib/utils/foreign.js","./guid":"../node_modules/piral-core/lib/utils/guid.js","./helpers":"../node_modules/piral-core/lib/utils/helpers.js","./media":"../node_modules/piral-core/lib/utils/media.js","./react":"../node_modules/piral-core/lib/utils/react.js","./storage":"../node_modules/piral-core/lib/utils/storage.js"}],"../node_modules/piral-core/lib/actions/app.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var tslib_1 = require("tslib");
+
+var react_1 = require("react");
+
+var utils_1 = require("../utils");
+
+function changeLayout(ctx, current) {
+  ctx.dispatch(function (state) {
+    return tslib_1.__assign(tslib_1.__assign({}, state), {
+      app: utils_1.withKey(state.app, 'layout', current)
+    });
+  });
+}
+
+exports.changeLayout = changeLayout;
+
+function initialize(ctx, loading, error, modules) {
+  ctx.dispatch(function (state) {
+    return tslib_1.__assign(tslib_1.__assign({}, state), {
+      app: tslib_1.__assign(tslib_1.__assign({}, state.app), {
+        error: error,
+        loading: loading
+      }),
+      modules: modules
+    });
+  });
+}
+
+exports.initialize = initialize;
+
+function injectPilet(ctx, pilet) {
+  ctx.dispatch(function (state) {
+    return tslib_1.__assign(tslib_1.__assign({}, state), {
+      modules: utils_1.replaceOrAddItem(state.modules, pilet, function (m) {
+        return m.name === pilet.name;
+      }),
+      registry: utils_1.removeNested(state.registry, function (m) {
+        return m.pilet === pilet.name;
+      })
+    });
+  });
+}
+
+exports.injectPilet = injectPilet;
+
+function setComponent(ctx, name, component) {
+  ctx.dispatch(function (state) {
+    return tslib_1.__assign(tslib_1.__assign({}, state), {
+      components: utils_1.withKey(state.components, name, component)
+    });
+  });
+}
+
+exports.setComponent = setComponent;
+
+function setErrorComponent(ctx, type, component) {
+  ctx.dispatch(function (state) {
+    return tslib_1.__assign(tslib_1.__assign({}, state), {
+      errorComponents: utils_1.withKey(state.errorComponents, type, component)
+    });
+  });
+}
+
+exports.setErrorComponent = setErrorComponent;
+
+function setRoute(ctx, path, component) {
+  ctx.dispatch(function (state) {
+    return tslib_1.__assign(tslib_1.__assign({}, state), {
+      routes: utils_1.withKey(state.routes, path, component)
+    });
+  });
+}
+
+exports.setRoute = setRoute;
+
+function includeProvider(ctx, provider) {
+  ctx.dispatch(function (state) {
+    return tslib_1.__assign(tslib_1.__assign({}, state), {
+      provider: !state.provider ? provider : react_1.cloneElement(provider, undefined, state.provider)
+    });
+  });
+}
+
+exports.includeProvider = includeProvider;
+},{"tslib":"../node_modules/tslib/tslib.es6.js","react":"../node_modules/react/index.js","../utils":"../node_modules/piral-core/lib/utils/index.js"}],"../node_modules/piral-core/lib/actions/components.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var tslib_1 = require("tslib");
+
+var utils_1 = require("../utils");
+
+function registerPage(ctx, name, value) {
+  ctx.dispatch(function (state) {
+    return tslib_1.__assign(tslib_1.__assign({}, state), {
+      registry: tslib_1.__assign(tslib_1.__assign({}, state.registry), {
+        pages: utils_1.withKey(state.registry.pages, name, value)
+      })
+    });
+  });
+}
+
+exports.registerPage = registerPage;
+
+function unregisterPage(ctx, name) {
+  ctx.dispatch(function (state) {
+    return tslib_1.__assign(tslib_1.__assign({}, state), {
+      registry: tslib_1.__assign(tslib_1.__assign({}, state.registry), {
+        pages: utils_1.withoutKey(state.registry.pages, name)
+      })
+    });
+  });
+}
+
+exports.unregisterPage = unregisterPage;
+
+function registerExtension(ctx, name, value) {
+  ctx.dispatch(function (state) {
+    return tslib_1.__assign(tslib_1.__assign({}, state), {
+      registry: tslib_1.__assign(tslib_1.__assign({}, state.registry), {
+        extensions: utils_1.withKey(state.registry.extensions, name, utils_1.appendItem(state.registry.extensions[name], value))
+      })
+    });
+  });
+}
+
+exports.registerExtension = registerExtension;
+
+function unregisterExtension(ctx, name, reference) {
+  ctx.dispatch(function (state) {
+    return tslib_1.__assign(tslib_1.__assign({}, state), {
+      registry: tslib_1.__assign(tslib_1.__assign({}, state.registry), {
+        extensions: utils_1.withKey(state.registry.extensions, name, utils_1.excludeOn(state.registry.extensions[name], function (m) {
+          return m.reference === reference;
+        }))
+      })
+    });
+  });
+}
+
+exports.unregisterExtension = unregisterExtension;
+},{"tslib":"../node_modules/tslib/tslib.es6.js","../utils":"../node_modules/piral-core/lib/utils/index.js"}],"../node_modules/piral-core/lib/actions/data.js":[function(require,module,exports) {
+"use strict";
+
+function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var tslib_1 = require("tslib");
+
+var utils_1 = require("../utils");
+
+function resetData(ctx) {
+  ctx.dispatch(function (state) {
+    return tslib_1.__assign(tslib_1.__assign({}, state), {
+      data: {}
+    });
+  });
+}
+
+exports.resetData = resetData;
+
+function readDataItem(ctx, key) {
+  return ctx.readState(function (state) {
+    return state.data[key];
+  });
+}
+
+exports.readDataItem = readDataItem;
+
+function readDataValue(ctx, key) {
+  var item = readDataItem(ctx, key);
+  return item && item.value;
+}
+
+exports.readDataValue = readDataValue;
+
+function writeDataItem(ctx, key, value, owner, target, expires) {
+  var isNull = !value && _typeof(value) === 'object';
+  var data = isNull ? value : {
+    value: value,
+    owner: owner,
+    target: target,
+    expires: expires
+  };
+  ctx.dispatch(function (state) {
+    return tslib_1.__assign(tslib_1.__assign({}, state), {
+      data: utils_1.updateKey(state.data, key, data)
+    });
+  });
+  ctx.emit('store-data', {
+    name: key,
+    target: target,
+    value: value,
+    owner: owner,
+    expires: expires
+  });
+}
+
+exports.writeDataItem = writeDataItem;
+
+function tryWriteDataItem(ctx, key, value, owner, target, expires) {
+  var item = readDataItem(ctx, key);
+
+  if (item && item.owner !== owner) {
+    console.error("Invalid data write to '" + key + "'. This item currently belongs to '" + item.owner + "' (write attempted from '" + owner + "'). The action has been ignored.");
+    return false;
+  }
+
+  writeDataItem(ctx, key, value, owner, target, expires);
+  return true;
+}
+
+exports.tryWriteDataItem = tryWriteDataItem;
+},{"tslib":"../node_modules/tslib/tslib.es6.js","../utils":"../node_modules/piral-core/lib/utils/index.js"}],"../node_modules/piral-core/lib/actions/define.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+function defineAction(ctx, actionName, action) {
+  ctx[actionName] = action.bind(ctx, ctx);
+}
+
+exports.defineAction = defineAction;
+
+function defineActions(ctx, actions) {
+  for (var _i = 0, _a = Object.keys(actions); _i < _a.length; _i++) {
+    var actionName = _a[_i];
+    var action = actions[actionName];
+    defineAction(ctx, actionName, action);
+  }
+}
+
+exports.defineActions = defineActions;
+},{}],"../node_modules/piral-core/lib/actions/portal.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var tslib_1 = require("tslib");
+
+var utils_1 = require("../utils");
+
+function destroyPortal(ctx, id) {
+  ctx.dispatch(function (state) {
+    return tslib_1.__assign(tslib_1.__assign({}, state), {
+      portals: utils_1.withoutKey(state.portals, id)
+    });
+  });
+}
+
+exports.destroyPortal = destroyPortal;
+
+function showPortal(ctx, id, entry) {
+  ctx.dispatch(function (state) {
+    return tslib_1.__assign(tslib_1.__assign({}, state), {
+      portals: utils_1.withKey(state.portals, id, utils_1.includeItem(state.portals[id], entry))
+    });
+  });
+}
+
+exports.showPortal = showPortal;
+},{"tslib":"../node_modules/tslib/tslib.es6.js","../utils":"../node_modules/piral-core/lib/utils/index.js"}],"../node_modules/@libre/atom/dist/index.esm.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.addChangeHandler = addChangeHandler;
+exports.removeChangeHandler = removeChangeHandler;
+exports.deref = deref;
+exports.getValidator = getValidator;
+exports.set = set;
+exports.setValidator = setValidator;
+exports.swap = swap;
+exports.Atom = void 0;
+var nextAtomUid = 0;
+var stateByAtomId = Object.create(null);
+var validatorByAtomId = Object.create(null);
+var changeHandlersByAtomId = {};
+/** @ignore */
+
+function _useNextAtomId() {
+  return nextAtomUid++;
+}
+/** @ignore */
+
+
+function _getState(atom) {
+  return stateByAtomId[atom["$$id"]];
+}
+/** @ignore */
+
+
+function _setState(atom, state) {
+  stateByAtomId[atom["$$id"]] = state;
+}
+/** @ignore */
+
+
+function _getValidator(atom) {
+  return validatorByAtomId[atom["$$id"]];
+}
+/** @ignore */
+
+
+function _setValidator(atom, validator) {
+  validatorByAtomId[atom["$$id"]] = validator;
+}
+/** @ignore */
+
+
+function _initChangeHandlerDict(atom) {
+  changeHandlersByAtomId[atom["$$id"]] = {};
+}
+/** @ignore */
+
+
+function _addChangeHandler(atom, key, handler) {
+  if (typeof changeHandlersByAtomId[atom["$$id"]][key] === "function") {
+    throw new Error("Change handler already registered for key \"" + key + "\" on " + atom + ".\nRemove the existing handler before registering a new one.");
+  }
+
+  changeHandlersByAtomId[atom["$$id"]][key] = handler;
+}
+/** @ignore */
+
+
+function _removeChangeHandler(atom, key) {
+  delete changeHandlersByAtomId[atom["$$id"]][key];
+}
+/** @ignore */
+
+
+function _runChangeHandlers(atom, previous, current) {
+  Object.keys(changeHandlersByAtomId[atom["$$id"]]).forEach(function (k) {
+    if (typeof changeHandlersByAtomId[atom["$$id"]][k] === "function") {
+      changeHandlersByAtomId[atom["$$id"]][k]({
+        previous: previous,
+        current: current
+      });
+    }
+  });
+}
+/**
+ * Registers a function to be run each time the state of `atom` changes.
+ *
+ * Will throw an Error if `key` is already taken by another handler.
+ *
+ * @example
+```js
+
+import {Atom, addChangeHandler, swap} from '@libre/atom'
+
+const countAtom = Atom.of({ count: 0 })
+
+addChangeHandler(countAtom, "log", ({current, previous}) => {
+  console.log(previous, current)
+})
+
+swap(countAtom, (state) => ({ count: state.count + 1 }))
+
+
+// stdout logs:
+// { count: 0 }
+// { count: 1 }
+
+```
+ */
+
+
+function addChangeHandler(atom, key, handler) {
+  _addChangeHandler(atom, key, handler);
+}
+/**
+ * Deletes the `key` and the handler associated with `key` so that it not longer runs
+ * when the state of `atom` changes.
+ *
+ * @example
+```js
+
+import {Atom, addChangeHandler, removeChangeHandler, swap} from '@libre/atom'
+
+const countAtom = Atom.of({ count: 0 })
+
+addChangeHandler(countAtom, "log", ({current, previous}) => {
+  console.log(previous, current)
+})
+
+swap(countAtom, (state) => ({ count: state.count + 1 }))
+
+// stdout logs:
+// { count: 0 }
+// { count: 1 }
+
+removeChangeHandler(atom, "log")
+
+swap(countAtom, (state) => ({ count: state.count + 1 }))
+
+// nothing is logged
+```
+ */
+
+
+function removeChangeHandler(atom, key) {
+  _removeChangeHandler(atom, key);
+}
+/** @ignore */
+
+
+function prettyPrint(val) {
+  return JSON.stringify(val, null, "  ");
+}
+/**
+ * A data structure useful for providing a controlled, predictable mechanism for mutability.
+ * Allows multiple components of a program to share read/write access to some state in such
+ * a way that no component can mutate another component's current reference to the state in
+ * the middle of some process or asynchronous operation.
+ *
+ */
+
+
+var Atom =
+/** @class */
+function () {
+  /** @ignore */
+  function Atom(state, _a) {
+    var validator = (_a === void 0 ? {} : _a).validator;
+
+    validator = validator || function () {
+      return true;
+    };
+
+    if (!validator(state)) {
+      var errMsg = "Atom initialized with invalid state:\n\n" + prettyPrint(state) + "\n\naccording to validator function:\n" + validator + "\n\n";
+      var err = Error(errMsg);
+      err.name = "AtomInvalidStateError";
+      throw err;
+    }
+
+    Object.defineProperty(this, "$$id", {
+      value: _useNextAtomId()
+    });
+
+    _setState(this, state);
+
+    _setValidator(this, validator);
+
+    _initChangeHandlerDict(this);
+
+    return this;
+  }
+  /**
+   * Constructs a new instance of [[Atom]] with its internal state
+   * set to `state`.
+   *
+   * @param S the type of the value being set as an [[Atom]]'s internal state
+   * @example
+  ```js
+   import { Atom } from '@libre/atom'
+   const a1 = Atom.of(0)
+  const a2 = Atom.of("zero")
+  const a3 = Atom.of({ count: 0 })
+  ```
+   */
+
+
+  Atom.of = function (state, options) {
+    return new Atom(state, options);
+  };
+  /** @ignore */
+
+
+  Atom.prototype.toString = function () {
+    return "Atom<" + prettyPrint(_getState(this)) + ">";
+  };
+  /** @ignore */
+
+
+  Atom.prototype.inspect = function () {
+    return this.toString();
+  };
+
+  return Atom;
+}();
+/** @ignore */
+
+
+exports.Atom = Atom;
+var expectedAtomButGot = "Expected an Atom instances, but got:";
+/** @ignore */
+
+function throwIfNotAtom(atom) {
+  if (!(atom instanceof Atom)) {
+    throw TypeError(expectedAtomButGot + "\n\n" + prettyPrint(atom));
+  }
+}
+/**
+ * Dereferences (i.e. "*reads*") the current state of an [[Atom]]. The dereferenced value
+ * should ___not___ be mutated.
+ *
+ * @param <S> the type of `atom`'s inner state
+ *
+ * @example
+```js
+
+import {Atom, deref} from '@libre/atom'
+
+const stateAtom = Atom.of({ count: 0 })
+
+deref(stateAtom) // => { count: 0 }
+```
+ */
+
+
+function deref(atom) {
+  throwIfNotAtom(atom);
+  return _getState(atom);
+}
+/**
+ * Gets `atom`'s validator function
+ *
+ * @param <S> the type of `atom`'s inner state
+ *
+ * @example
+```js
+
+import {Atom, deref, getValidator, swap} from '@libre/atom'
+
+const atom = Atom.of({ count: 0 }, { validator: (state) => isEven(state.count) })
+const validator = getValidator(atom)
+validator({ count: 3 }) // => false
+validator({ count: 2 }) // => true
+```
+ */
+
+
+function getValidator(atom) {
+  throwIfNotAtom(atom);
+  return _getValidator(atom);
+}
+/**
+ * Sets `atom`s state to `nextState`.
+ *
+ * It is equivalent to `swap(atom, () => newState)`.
+ *
+ * @param <S> the type of `atom`'s inner state
+ * @param atom an instance of [[Atom]]
+ * @param nextState the value to which to set the state; it should be the same type/interface as current state
+ *
+  * @example
+```js
+
+import {Atom, deref, set} from '@libre/atom'
+
+const atom = Atom.of({ count: 0 })
+
+set(atom, { count: 100 })
+deref(atom) // => { count: 100 }
+```
+ */
+
+
+function set(atom, nextState) {
+  throwIfNotAtom(atom);
+
+  var validator = _getValidator(atom);
+
+  var didValidate = validator(nextState);
+
+  if (!didValidate) {
+    var errMsg = "Attempted to set the state of\n\n" + atom + "\n\nwith:\n\n" + prettyPrint(nextState) + "\n\nbut it did not pass validator:\n" + validator + "\n\n";
+    var err = Error(errMsg);
+    err.name = "AtomInvalidStateError";
+    throw err;
+  } else {
+    var prevState = deref(atom);
+
+    _setState(atom, nextState);
+
+    _runChangeHandlers(atom, prevState, nextState);
+  }
+}
+/**
+ * Sets the `validator` for `atom`. `validator` must be a pure function of one argument,
+ * which will be passed the intended new state on any state change. If the new state is
+ * unacceptable, `validator` should return false or throw an exception. If the current state
+ * is not acceptable to the new validator, an exception will be thrown and the validator will
+ * not be changed.
+ *
+ * @param <S> the type of `atom`'s inner state
+ *
+ * @example
+```js
+
+import {Atom, deref, setValidator, set} from '@libre/atom'
+import { _setValidator } from './internal-state';
+
+const atom = Atom.of({ count: 0 }, {validator: (state) => isNumber(state.count) })
+setValidator(atom, (state) => isOdd(state.count)) // Error; new validator rejected
+set(atom, {count: "not number"}) // Error; new state not set
+setValidator(atom, (state) => isEven(state.count)) // All good
+set(atom, {count: 2}) // All good
+
+```
+ */
+
+
+function setValidator(atom, validator) {
+  throwIfNotAtom(atom);
+
+  if (!validator(_getState(atom))) {
+    var errMsg = "Could not set validator on\n\n" + atom + "\n\nbecause current state would be invalid according to new validator:\n" + validator + "\n\n";
+    var err = Error(errMsg);
+    err.name = "AtomInvalidStateError";
+    throw err;
+  } else {
+    _setValidator(atom, validator);
+  }
+}
+/**
+ * Swaps `atom`'s state with the value returned from applying `updateFn` to `atom`'s
+ * current state. `updateFn` should be a pure function and ___not___ mutate `state`.
+ *
+ * @param <S> the type of `atom`'s inner state
+ * @param atom an instance of [[Atom]]
+ * @param updateFn a pure function that takes the current state and returns the next state; the next state should be of the same type/interface as the current state;
+ *
+ * @example
+ * ```jsx
+ *
+ *import {Atom, swap} from '@libre/atom'
+import {prettyPrint} from './prettyPrint'
+ *
+ *const stateAtom = Atom.of({ count: 0 })
+ *const increment = () => swap(stateAtom, (state) => ({
+ *  count: state.count + 1
+ *}));
+ * ```
+ */
+
+
+function swap(atom, updateFn) {
+  throwIfNotAtom(atom);
+
+  var prevState = _getState(atom);
+
+  var nextState = updateFn(prevState);
+
+  var validator = _getValidator(atom);
+
+  var didValidate = validator(nextState);
+
+  if (!didValidate) {
+    var errMsg = "swap updateFn\n" + updateFn + "\n\nattempted to swap the state of\n\n" + atom + "\n\nwith:\n\n" + prettyPrint(nextState) + "\n\nbut it did not pass validator:\n" + validator + "\n\n";
+    var err = Error(errMsg);
+    err.name = "AtomInvalidStateError";
+    throw err;
+  } else {
+    _setState(atom, nextState);
+
+    _runChangeHandlers(atom, prevState, nextState);
+  }
+}
+},{}],"../node_modules/@dbeining/react-atom/dist/react-atom.js":[function(require,module,exports) {
+var define;
+function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+!function (e, t) {
+  "object" == (typeof exports === "undefined" ? "undefined" : _typeof(exports)) && "object" == (typeof module === "undefined" ? "undefined" : _typeof(module)) ? module.exports = t() : "function" == typeof define && define.amd ? define([], t) : "object" == (typeof exports === "undefined" ? "undefined" : _typeof(exports)) ? exports.reactAtom = t() : e.reactAtom = t();
+}("undefined" != typeof self ? self : this, function () {
+  return function (e) {
+    var t = {};
+
+    function o(r) {
+      if (t[r]) return t[r].exports;
+      var n = t[r] = {
+        i: r,
+        l: !1,
+        exports: {}
+      };
+      return e[r].call(n.exports, n, n.exports, o), n.l = !0, n.exports;
+    }
+
+    return o.m = e, o.c = t, o.d = function (e, t, r) {
+      o.o(e, t) || Object.defineProperty(e, t, {
+        enumerable: !0,
+        get: r
+      });
+    }, o.r = function (e) {
+      "undefined" != typeof Symbol && Symbol.toStringTag && Object.defineProperty(e, Symbol.toStringTag, {
+        value: "Module"
+      }), Object.defineProperty(e, "__esModule", {
+        value: !0
+      });
+    }, o.t = function (e, t) {
+      if (1 & t && (e = o(e)), 8 & t) return e;
+      if (4 & t && "object" == _typeof(e) && e && e.__esModule) return e;
+      var r = Object.create(null);
+      if (o.r(r), Object.defineProperty(r, "default", {
+        enumerable: !0,
+        value: e
+      }), 2 & t && "string" != typeof e) for (var n in e) {
+        o.d(r, n, function (t) {
+          return e[t];
+        }.bind(null, n));
+      }
+      return r;
+    }, o.n = function (e) {
+      var t = e && e.__esModule ? function () {
+        return e.default;
+      } : function () {
+        return e;
+      };
+      return o.d(t, "a", t), t;
+    }, o.o = function (e, t) {
+      return Object.prototype.hasOwnProperty.call(e, t);
+    }, o.p = "", o(o.s = 1);
+  }([function (e, t) {
+    e.exports = require("@libre/atom");
+  }, function (e, t, o) {
+    "use strict";
+
+    Object.defineProperty(t, "__esModule", {
+      value: !0
+    }), function (e) {
+      for (var o in e) {
+        t.hasOwnProperty(o) || (t[o] = e[o]);
+      }
+    }(o(0));
+    var r = o(2);
+    t.initialize = r.initialize, t.useAtom = r.useAtom;
+  }, function (e, t, o) {
+    "use strict";
+
+    var r = this && this.__importStar || function (e) {
+      if (e && e.__esModule) return e;
+      var t = {};
+      if (null != e) for (var o in e) {
+        Object.hasOwnProperty.call(e, o) && (t[o] = e[o]);
+      }
+      return t.default = e, t;
+    };
+
+    Object.defineProperty(t, "__esModule", {
+      value: !0
+    });
+    var n = o(0),
+        i = o(3),
+        u = r(o(4)),
+        a = o(5),
+        l = 0,
+        c = 0;
+
+    function s(e) {
+      var t = e.useLayoutEffect,
+          o = e.useMemo,
+          r = e.useState;
+      return l += 1, {
+        Atom: n.Atom,
+        addChangeHandler: n.addChangeHandler,
+        deref: n.deref,
+        getValidator: n.getValidator,
+        removeChangeHandler: n.removeChangeHandler,
+        set: n.set,
+        setValidator: n.setValidator,
+        swap: n.swap,
+        useAtom: function useAtom(e, i) {
+          var l;
+
+          if (!(e instanceof n.Atom)) {
+            var s = JSON.stringify(e, null, "  ");
+            throw TypeError(u.calledUseAtomWithNonAtom + "\n" + s);
+          }
+
+          var f,
+              d = (i || {
+            select: null
+          }).select,
+              m = n.deref(e),
+              p = d || function (e) {
+            return e;
+          };
+
+          try {
+            p = o(function () {
+              return a.memoLast(p);
+            }, [d]), l = r({}), f = l[1];
+          } catch (e) {
+            throw new TypeError(u.calledUseAtomOutsideFunctionComponent);
+          }
+
+          return t(function () {
+            var t = f["@@react-atom/hook_id"] ? f["@@react-atom/hook_id"] : "hook#" + ++c;
+            return f["@@react-atom/hook_id"] = t, n.addChangeHandler(e, f["@@react-atom/hook_id"], function (e) {
+              var t = e.previous,
+                  o = e.current;
+              a.isShallowEqual(p(t), p(o)) || f({});
+            }), function () {
+              n.removeChangeHandler(e, f["@@react-atom/hook_id"]);
+            };
+          }, [f, d]), p(m);
+        }
+      };
+    }
+
+    t.initialize = s, t.useAtom = function (e, t) {
+      if (l > 1) throw Error(u.multipleInstantiations);
+      var o = (t || {
+        select: null
+      }).select;
+      return o ? f(e, {
+        select: o
+      }) : f(e);
+    };
+    var f = s({
+      useLayoutEffect: i.useLayoutEffect,
+      useMemo: i.useMemo,
+      useState: i.useState
+    }).useAtom;
+  }, function (e, t) {
+    e.exports = require("react");
+  }, function (e, t, o) {
+    "use strict";
+
+    Object.defineProperty(t, "__esModule", {
+      value: !0
+    }), t.calledUseAtomOutsideFunctionComponent = "useAtom can only be called inside the body of a function component", t.calledUseAtomWithNonAtom = "useAtom only accepts `react-atom` Atoms, but got:", t.calledDerefWithNonAtom = "deref only accepts `react-atom` Atoms, but got:", t.multipleInstantiations = "Multiple instances of react-atom have been detected, which will lead to unexpected bugs in the useAtom custom hook. This usually means react-atom has been initialized with `initialize(hooks)` in addition to importing the default Atom, useAtom, etc. directly. To avoid this error, only use the implementation returned from `initialize`.";
+  }, function (e, t, o) {
+    "use strict";
+
+    function r(e, t) {
+      return e === t ? 0 !== e || 1 / e == 1 / t : e != e && t != t;
+    }
+
+    function n(e) {
+      if ("object" != _typeof(e) || null === e) return !1;
+      var t = Object.getPrototypeOf(e);
+      return t === Object.prototype || null === t;
+    }
+
+    Object.defineProperty(t, "__esModule", {
+      value: !0
+    }), t.isPOJO = n, t.isShallowEqual = function (e, t) {
+      if ([e, t].every(n) || [e, t].every(Array.isArray)) {
+        if (r(e, t)) return !0;
+        if (Object.keys(e).length !== Object.keys(t).length) return !1;
+
+        for (var o in e) {
+          if (!r(e[o], t[o])) return !1;
+        }
+
+        return !0;
+      }
+
+      return r(e, t);
+    }, t.memoLast = function (e) {
+      var t, o;
+      return function (n) {
+        return r(t, n) || (t = n, o = e(n)), o;
+      };
+    };
+  }]);
+});
+},{"@libre/atom":"../node_modules/@libre/atom/dist/index.esm.js","react":"../node_modules/react/index.js"}],"../node_modules/piral-core/lib/actions/state.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var react_atom_1 = require("@dbeining/react-atom");
+
+function dispatch(ctx, update) {
+  react_atom_1.swap(ctx.state, update);
+}
+
+exports.dispatch = dispatch;
+
+function readState(ctx, read) {
+  var state = react_atom_1.deref(ctx.state);
+  return read(state);
+}
+
+exports.readState = readState;
+},{"@dbeining/react-atom":"../node_modules/@dbeining/react-atom/dist/react-atom.js"}],"../node_modules/piral-core/lib/actions/index.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var tslib_1 = require("tslib");
+
+tslib_1.__exportStar(require("./app"), exports);
+
+tslib_1.__exportStar(require("./components"), exports);
+
+tslib_1.__exportStar(require("./data"), exports);
+
+tslib_1.__exportStar(require("./define"), exports);
+
+tslib_1.__exportStar(require("./portal"), exports);
+
+tslib_1.__exportStar(require("./state"), exports);
+},{"tslib":"../node_modules/tslib/tslib.es6.js","./app":"../node_modules/piral-core/lib/actions/app.js","./components":"../node_modules/piral-core/lib/actions/components.js","./data":"../node_modules/piral-core/lib/actions/data.js","./define":"../node_modules/piral-core/lib/actions/define.js","./portal":"../node_modules/piral-core/lib/actions/portal.js","./state":"../node_modules/piral-core/lib/actions/state.js"}],"../node_modules/piral-core/lib/state/createActions.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var tslib_1 = require("tslib");
+
+var actions = require("../actions");
+
+function createContext(state, events) {
+  var ctx = tslib_1.__assign(tslib_1.__assign({}, events), {
+    apis: {},
+    converters: {
+      html: function html(_a) {
+        var component = _a.component;
+        return component;
+      }
+    },
+    state: state
+  });
+
+  return ctx;
+}
+
+function includeActions(ctx, actions) {
+  var actionNames = Object.keys(actions);
+
+  for (var _i = 0, actionNames_1 = actionNames; _i < actionNames_1.length; _i++) {
+    var actionName = actionNames_1[_i];
+    var action = actions[actionName];
+    ctx[actionName] = action.bind(ctx, ctx);
+  }
+}
+
+exports.includeActions = includeActions;
+
+function createActions(state, events) {
+  var context = createContext(state, events);
+  includeActions(context, actions);
+  return context;
+}
+
+exports.createActions = createActions;
+},{"tslib":"../node_modules/tslib/tslib.es6.js","../actions":"../node_modules/piral-core/lib/actions/index.js"}],"../node_modules/@babel/runtime/helpers/esm/inheritsLoose.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -32776,2028 +34797,7 @@ if ("development" !== "production") {
     style: _propTypes.default.object
   });
 }
-},{"react-router":"../node_modules/react-router/esm/react-router.js","@babel/runtime/helpers/esm/inheritsLoose":"../node_modules/@babel/runtime/helpers/esm/inheritsLoose.js","react":"../node_modules/react/index.js","history":"../node_modules/history/esm/history.js","prop-types":"../node_modules/prop-types/index.js","tiny-warning":"../node_modules/tiny-warning/dist/tiny-warning.esm.js","@babel/runtime/helpers/esm/extends":"../node_modules/@babel/runtime/helpers/esm/extends.js","@babel/runtime/helpers/esm/objectWithoutPropertiesLoose":"../node_modules/@babel/runtime/helpers/esm/objectWithoutPropertiesLoose.js","tiny-invariant":"../node_modules/tiny-invariant/dist/tiny-invariant.esm.js"}],"../node_modules/piral-base/lib/utils.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var tslib_1 = require("tslib");
-
-var defaultGlobalDependencies = {};
-
-var defaultGetDependencies = function defaultGetDependencies() {
-  return false;
-};
-
-function isfunc(f) {
-  return typeof f === 'function';
-}
-
-exports.isfunc = isfunc;
-
-function createEmptyModule(meta) {
-  return tslib_1.__assign(tslib_1.__assign({}, meta), {
-    setup: function setup() {}
-  });
-}
-
-exports.createEmptyModule = createEmptyModule;
-
-function getDependencyResolver(globalDependencies, getLocalDependencies) {
-  if (globalDependencies === void 0) {
-    globalDependencies = defaultGlobalDependencies;
-  }
-
-  if (getLocalDependencies === void 0) {
-    getLocalDependencies = defaultGetDependencies;
-  }
-
-  return function (target) {
-    return getLocalDependencies(target) || globalDependencies;
-  };
-}
-
-exports.getDependencyResolver = getDependencyResolver;
-},{"tslib":"../node_modules/tslib/tslib.es6.js"}],"../node_modules/piral-base/lib/fetch.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-/**
- * Uses the `fetch` function (must be available). If you
- * use this function make sure to use, e.g., `whatwg-fetch`
- * which comes with polyfills for older browsers.
- * @param url The URL to GET.
- * @returns A promise leading to the raw text content.
- */
-
-function defaultFetchDependency(url) {
-  return fetch(url, {
-    method: 'GET',
-    cache: 'force-cache'
-  }).then(function (m) {
-    return m.text();
-  });
-}
-
-exports.defaultFetchDependency = defaultFetchDependency;
-},{}],"../node_modules/piral-base/lib/dependency.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-function requireModule(name, dependencies) {
-  var dependency = dependencies[name];
-
-  if (!dependency) {
-    var error = new Error("Cannot find module '" + name + "'");
-    error.code = 'MODULE_NOT_FOUND';
-    throw error;
-  }
-
-  return dependency;
-}
-
-function checkPiletApp(name, app) {
-  if (!app) {
-    console.error('Invalid module found.', name);
-  } else if (typeof app.setup !== 'function') {
-    console.warn('Setup function is missing.', name);
-  } else {
-    return app;
-  }
-
-  return {
-    setup: function setup() {}
-  };
-}
-
-function checkPiletAppAsync(name, app) {
-  return Promise.resolve(app).then(function (resolvedApp) {
-    return checkPiletApp(name, resolvedApp);
-  });
-}
-
-function getLocalRequire(dependencies) {
-  if (dependencies === void 0) {
-    dependencies = {};
-  }
-
-  return function (moduleName) {
-    return requireModule(moduleName, dependencies);
-  };
-}
-/**
- * Compiles the given content from a generic dependency.
- * @param name The name of the dependency to compile.
- * @param content The content of the dependency to compile.
- * @param link The optional link to the dependency.
- * @param dependencies The globally available dependencies.
- * @returns The evaluated dependency.
- */
-
-
-function evalDependency(name, content, link, dependencies) {
-  if (link === void 0) {
-    link = '';
-  }
-
-  var mod = {
-    exports: {}
-  };
-
-  var require = getLocalRequire(dependencies);
-
-  try {
-    var sourceUrl = link && "\n//# sourceURL=" + link;
-    var importer = new Function('module', 'exports', 'require', content + sourceUrl);
-    importer(mod, mod.exports, require);
-  } catch (e) {
-    console.error("Error while evaluating " + name + ".", e);
-  }
-
-  return mod.exports;
-}
-
-exports.evalDependency = evalDependency;
-/**
- * Compiles the given content from a module with a dependency resolution.
- * @param name The name of the dependency to compile.
- * @param content The content of the dependency to compile.
- * @param link The optional link to the dependency.
- * @param dependencies The globally available dependencies.
- * @returns The evaluated module.
- */
-
-function compileDependency(name, content, link, dependencies) {
-  if (link === void 0) {
-    link = '';
-  }
-
-  var app = evalDependency(name, content, link, dependencies);
-  return checkPiletAppAsync(name, app);
-}
-
-exports.compileDependency = compileDependency;
-/**
- * Includes the given script via its URL with a dependency resolution.
- * @param meta The meta data of the dependency to include.
- * @param dependencies The globally available dependencies.
- * @returns The evaluated module.
- */
-
-function includeDependency(meta, dependencies) {
-  return new Promise(function (resolve) {
-    var rr = meta.requireRef;
-    var s = document.createElement('script');
-    s.async = true;
-    s.src = meta.link;
-
-    if (meta.integrity) {
-      s.integrity = meta.integrity;
-    }
-
-    window[rr] = getLocalRequire(dependencies);
-
-    s.onload = function () {
-      return resolve(checkPiletAppAsync(meta.name, s.app));
-    };
-
-    s.onerror = function () {
-      return resolve(checkPiletApp(meta.name));
-    };
-
-    document.body.appendChild(s);
-  });
-}
-
-exports.includeDependency = includeDependency;
-},{}],"../node_modules/piral-base/lib/load.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var tslib_1 = require("tslib");
-
-var utils_1 = require("./utils");
-
-var fetch_1 = require("./fetch");
-
-var dependency_1 = require("./dependency");
-
-function loadFrom(meta, getDependencies, loader) {
-  var dependencies = tslib_1.__assign({}, getDependencies(meta) || {});
-
-  return loader(dependencies).then(function (app) {
-    return tslib_1.__assign(tslib_1.__assign({}, app), meta);
-  });
-}
-
-function checkFetchPilets(fetchPilets) {
-  if (!utils_1.isfunc(fetchPilets)) {
-    console.error('Could not get the pilets. Provide a valid `fetchPilets` function.');
-    return false;
-  }
-
-  return true;
-}
-/**
- * Loads the given raw pilet content by resolving its dependencies and
- * evaluating the content.
- * @param meta The raw pilet content as received from the server.
- * @param fetchDependency The function to resolve a dependency.
- * @param dependencies The already evaluated global dependencies.
- * @returns A promise leading to the pilet content which has the metadata and a `setup` function.
- */
-
-
-function loadPilet(meta, getDependencies, fetchDependency) {
-  if (fetchDependency === void 0) {
-    fetchDependency = fetch_1.defaultFetchDependency;
-  }
-
-  if ('requireRef' in meta) {
-    return loadFrom(meta, getDependencies, function (deps) {
-      return dependency_1.includeDependency(meta, deps);
-    });
-  }
-
-  var name = meta.name,
-      link = meta.link,
-      content = meta.content;
-
-  if (link) {
-    return fetchDependency(link).then(function (content) {
-      return loadFrom(meta, getDependencies, function (deps) {
-        return dependency_1.compileDependency(name, content, link, deps);
-      });
-    });
-  } else if (content) {
-    return loadFrom(meta, getDependencies, function (deps) {
-      return dependency_1.compileDependency(name, content, link, deps);
-    });
-  } else {
-    console.warn('Empty pilet found!', name);
-  }
-
-  return Promise.resolve(utils_1.createEmptyModule(meta));
-}
-
-exports.loadPilet = loadPilet;
-/**
- * Loads the pilets metadata and puts them in the cache, if provided.
- * @param fetchPilets The function to resolve the pilets.
- * @param cache The optional cache to use initially and update later.
- */
-
-function loadMetadata(fetchPilets) {
-  if (checkFetchPilets(fetchPilets)) {
-    return fetchPilets();
-  }
-
-  return Promise.resolve([]);
-}
-
-exports.loadMetadata = loadMetadata;
-/**
- * Loads the pilets by first getting them, then evaluating the raw content.
- * @param fetchPilets The function to resolve the pilets.
- * @param fetchDependency A function to fetch the dependencies. By default, `fetch` is used.
- * @param dependencies The availablly global dependencies, if any.
- * @returns A promise leading to the evaluated pilets.
- */
-
-function loadPilets(fetchPilets, fetchDependency, globalDependencies, getLocalDependencies, integrity) {
-  var getDependencies = utils_1.getDependencyResolver(globalDependencies, getLocalDependencies);
-  return loadMetadata(fetchPilets).then(function (pilets) {
-    return Promise.all(pilets.map(function (m) {
-      return loadPilet(m, getDependencies, fetchDependency);
-    }));
-  });
-}
-
-exports.loadPilets = loadPilets;
-},{"tslib":"../node_modules/tslib/tslib.es6.js","./utils":"../node_modules/piral-base/lib/utils.js","./fetch":"../node_modules/piral-base/lib/fetch.js","./dependency":"../node_modules/piral-base/lib/dependency.js"}],"../node_modules/piral-base/lib/setup.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-/**
- * Sets up the given pilet by calling the exported `setup` function
- * on the pilet.
- * @param app The pilet's evaluated content.
- * @param api The generated API for the pilet.
- */
-
-function setupPilet(app, api) {
-  try {
-    return app.setup(api);
-  } catch (e) {
-    console.error("Error while setting up " + (app && app.name) + ".", e);
-  }
-}
-
-exports.setupPilet = setupPilet;
-},{}],"../node_modules/piral-base/lib/aggregate.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var utils_1 = require("./utils");
-
-var setup_1 = require("./setup");
-
-function checkCreateApi(createApi) {
-  if (!utils_1.isfunc(createApi)) {
-    console.warn('Invalid `createApi` function. Skipping pilet installation.');
-    return false;
-  }
-
-  return true;
-}
-/**
- * Sets up the evaluated pilets to become integrated pilets.
- * @param createApi The function to create an API object for a pilet.
- * @param pilets The available evaluated app pilets.
- * @returns The integrated pilets.
- */
-
-
-function createPilets(createApi, pilets) {
-  var promises = [];
-
-  if (checkCreateApi(createApi)) {
-    for (var _i = 0, pilets_1 = pilets; _i < pilets_1.length; _i++) {
-      var pilet = pilets_1[_i];
-      var api = createApi(pilet);
-      promises.push(setup_1.setupPilet(pilet, api));
-    }
-  }
-
-  return Promise.all(promises).then(function () {
-    return pilets;
-  });
-}
-
-exports.createPilets = createPilets;
-/**
- * Sets up an evaluated pilet to become an integrated pilet.
- * @param createApi The function to create an API object for the pilet.
- * @param pilet The available evaluated pilet.
- * @returns The integrated pilet.
- */
-
-function createPilet(createApi, pilet) {
-  var promises = [];
-
-  if (checkCreateApi(createApi)) {
-    var api = createApi(pilet);
-    promises.push(setup_1.setupPilet(pilet, api));
-  }
-
-  return Promise.all(promises).then(function () {
-    return pilet;
-  });
-}
-
-exports.createPilet = createPilet;
-},{"./utils":"../node_modules/piral-base/lib/utils.js","./setup":"../node_modules/piral-base/lib/setup.js"}],"../node_modules/piral-base/lib/strategies.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var tslib_1 = require("tslib");
-
-var utils_1 = require("./utils");
-
-var load_1 = require("./load");
-
-var aggregate_1 = require("./aggregate");
-
-function evalAll(createApi, oldModules, newModules) {
-  var _loop_1 = function _loop_1(oldModule) {
-    var newModule = newModules.filter(function (m) {
-      return m.name === oldModule.name;
-    })[0];
-
-    if (newModule) {
-      newModules.splice(newModules.indexOf(newModule), 1);
-    }
-  };
-
-  for (var _i = 0, oldModules_1 = oldModules; _i < oldModules_1.length; _i++) {
-    var oldModule = oldModules_1[_i];
-
-    _loop_1(oldModule);
-  }
-
-  return aggregate_1.createPilets(createApi, tslib_1.__spreadArrays(oldModules, newModules));
-}
-/**
- * This strategy is dependent on the async parameter. If false it will start rendering when
- * everything has been received, otherwise it will start rendering when the metadata has been
- * received. In any case it will evaluate pilets as fast as possible.
- * @param async Uses the asynchronous mode.
- */
-
-
-function createProgressiveStrategy(async) {
-  return function (options, cb) {
-    var fetchPilets = options.fetchPilets,
-        fetchDependency = options.fetchDependency,
-        dependencies = options.dependencies,
-        getDependencies = options.getDependencies,
-        createApi = options.createApi,
-        _a = options.pilets,
-        pilets = _a === void 0 ? [] : _a;
-    var getDep = utils_1.getDependencyResolver(dependencies, getDependencies);
-    var loader = load_1.loadMetadata(fetchPilets);
-    return aggregate_1.createPilets(createApi, pilets).then(function (allModules) {
-      if (async && allModules.length > 0) {
-        cb(undefined, allModules);
-      }
-
-      var followUp = loader.then(function (metadata) {
-        var promises = metadata.map(function (m) {
-          return load_1.loadPilet(m, getDep, fetchDependency).then(function (mod) {
-            var available = pilets.filter(function (m) {
-              return m.name === mod.name;
-            }).length === 0;
-
-            if (available) {
-              return aggregate_1.createPilet(createApi, mod).then(function (newModule) {
-                allModules.push(newModule);
-
-                if (async) {
-                  cb(undefined, allModules);
-                }
-              });
-            }
-          });
-        });
-        return Promise.all(promises).then(function () {
-          if (!async) {
-            cb(undefined, allModules);
-          }
-        });
-      });
-      return async ? loader.then() : followUp.then();
-    });
-  };
-}
-
-exports.createProgressiveStrategy = createProgressiveStrategy;
-/**
- * This strategy starts rendering when the pilets metadata has been received.
- * Evaluates the pilets once available without waiting for all pilets to be
- * available.
- */
-
-function blazingStrategy(options, cb) {
-  var strategy = createProgressiveStrategy(true);
-  return strategy(options, cb);
-}
-
-exports.blazingStrategy = blazingStrategy;
-/**
- * The async strategy picked when no strategy is declared and async is set to
- * true. Directly renders, but waits for all pilets to be available before
- * evaluating them.
- */
-
-function asyncStrategy(options, cb) {
-  standardStrategy(options, cb);
-  return Promise.resolve();
-}
-
-exports.asyncStrategy = asyncStrategy;
-/**
- * The standard strategy that is used if no strategy is declared and async is
- * false. Loads and evaluates all pilets before rendering.
- */
-
-function standardStrategy(options, cb) {
-  var fetchPilets = options.fetchPilets,
-      fetchDependency = options.fetchDependency,
-      dependencies = options.dependencies,
-      getDependencies = options.getDependencies,
-      createApi = options.createApi,
-      _a = options.pilets,
-      pilets = _a === void 0 ? [] : _a;
-  return load_1.loadPilets(fetchPilets, fetchDependency, dependencies, getDependencies).then(function (newModules) {
-    return evalAll(createApi, pilets, newModules);
-  }).then(function (modules) {
-    return cb(undefined, modules);
-  }).catch(function (error) {
-    return cb(error, []);
-  });
-}
-
-exports.standardStrategy = standardStrategy;
-/**
- * The strategy that could be used for special purposes, e.g., SSR or specific
- * builds of the Piral instance. This strategy ignores the fetcher and only
- * considers the already given pilets.
- */
-
-function syncStrategy(options, cb) {
-  var createApi = options.createApi,
-      _a = options.pilets,
-      pilets = _a === void 0 ? [] : _a;
-  return evalAll(createApi, pilets, []).then(function (modules) {
-    return cb(undefined, modules);
-  }, function (err) {
-    return cb(err, []);
-  });
-}
-
-exports.syncStrategy = syncStrategy;
-},{"tslib":"../node_modules/tslib/tslib.es6.js","./utils":"../node_modules/piral-base/lib/utils.js","./load":"../node_modules/piral-base/lib/load.js","./aggregate":"../node_modules/piral-base/lib/aggregate.js"}],"../node_modules/piral-base/lib/create.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var utils_1 = require("./utils");
-
-var strategies_1 = require("./strategies");
-
-function startLoadingPilets(options) {
-  var state = {
-    loaded: false,
-    pilets: [],
-    error: undefined
-  };
-  var notifiers = [];
-
-  var call = function call(notifier) {
-    return notifier(state.error, state.pilets, state.loaded);
-  };
-
-  var notify = function notify() {
-    return notifiers.forEach(call);
-  };
-
-  var setPilets = function setPilets(error, pilets) {
-    state.error = error;
-    state.pilets = pilets;
-    notify();
-  };
-
-  var setLoaded = function setLoaded() {
-    state.loaded = true;
-    notify();
-  };
-
-  var _a = options.strategy,
-      strategy = _a === void 0 ? strategies_1.standardStrategy : _a;
-  strategy(options, setPilets).then(setLoaded, setLoaded);
-  return {
-    connect: function connect(notifier) {
-      if (utils_1.isfunc(notifier)) {
-        notifiers.push(notifier);
-        call(notifier);
-      }
-    },
-    disconnect: function disconnect(notifier) {
-      var index = notifiers.indexOf(notifier);
-      index !== -1 && notifiers.splice(index, 1);
-    }
-  };
-}
-
-exports.startLoadingPilets = startLoadingPilets;
-},{"./utils":"../node_modules/piral-base/lib/utils.js","./strategies":"../node_modules/piral-base/lib/strategies.js"}],"../node_modules/piral-base/lib/index.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var tslib_1 = require("tslib");
-
-tslib_1.__exportStar(require("./create"), exports);
-
-tslib_1.__exportStar(require("./load"), exports);
-
-tslib_1.__exportStar(require("./strategies"), exports);
-
-tslib_1.__exportStar(require("./utils"), exports);
-},{"tslib":"../node_modules/tslib/tslib.es6.js","./create":"../node_modules/piral-base/lib/create.js","./load":"../node_modules/piral-base/lib/load.js","./strategies":"../node_modules/piral-base/lib/strategies.js","./utils":"../node_modules/piral-base/lib/utils.js"}],"../node_modules/piral-core/lib/utils/compare.js":[function(require,module,exports) {
-"use strict";
-
-function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-function compareObjects(a, b) {
-  for (var i in a) {
-    if (!(i in b)) {
-      return false;
-    }
-  }
-
-  for (var i in b) {
-    if (!compare(a[i], b[i])) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function compare(a, b) {
-  if (a !== b) {
-    var ta = _typeof(a);
-
-    var tb = _typeof(b);
-
-    if (ta === tb && ta === 'object' && a && b) {
-      return compareObjects(a, b);
-    }
-
-    return false;
-  }
-
-  return true;
-}
-
-exports.compare = compare;
-},{}],"../node_modules/piral-core/lib/utils/data.js":[function(require,module,exports) {
-"use strict";
-
-function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-var defaultTarget = 'memory';
-
-function createDataView(data) {
-  var proxyName = 'Proxy';
-  return window[proxyName] && new Proxy(data, {
-    get: function get(target, name) {
-      var item = target[name];
-      return item && item.value;
-    },
-    set: function set(_target, _name, _value) {
-      return true;
-    }
-  });
-}
-
-exports.createDataView = createDataView;
-
-function createDataOptions(options) {
-  if (options === void 0) {
-    options = defaultTarget;
-  }
-
-  if (typeof options === 'string') {
-    return {
-      target: options
-    };
-  } else if (options && _typeof(options) === 'object' && !Array.isArray(options)) {
-    return options;
-  } else {
-    return {
-      target: defaultTarget
-    };
-  }
-}
-
-exports.createDataOptions = createDataOptions;
-
-function getDataExpiration(expires) {
-  if (typeof expires === 'number') {
-    return expires;
-  } else if (expires instanceof Date) {
-    return expires.valueOf();
-  }
-
-  return -1;
-}
-
-exports.getDataExpiration = getDataExpiration;
-},{}],"../node_modules/piral-core/lib/utils/events.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-function nameOf(type) {
-  return "piral-" + type;
-}
-
-function createListener(state) {
-  var eventListeners = [];
-  return {
-    on: function on(type, callback) {
-      var listener = function listener(_a) {
-        var detail = _a.detail;
-        return detail && detail.state === state && callback(detail.arg);
-      };
-
-      document.body.addEventListener(nameOf(type), listener);
-      eventListeners.push([callback, listener]);
-      return this;
-    },
-    off: function off(type, callback) {
-      var listener = eventListeners.filter(function (m) {
-        return m[0] === callback;
-      })[0];
-
-      if (listener) {
-        document.body.removeEventListener(nameOf(type), listener[1]);
-        eventListeners.splice(eventListeners.indexOf(listener), 1);
-      }
-
-      return this;
-    },
-    emit: function emit(type, arg) {
-      var ce = document.createEvent('CustomEvent');
-      ce.initCustomEvent(nameOf(type), false, false, {
-        arg: arg,
-        state: state
-      });
-      document.body.dispatchEvent(ce);
-      return this;
-    }
-  };
-}
-
-exports.createListener = createListener;
-},{}],"../node_modules/piral-core/lib/utils/foreign.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var react_1 = require("react");
-
-var react_dom_1 = require("react-dom");
-
-function convertComponent(converter, component) {
-  if (typeof converter !== 'function') {
-    throw new Error("No converter for component of type \"" + component.type + "\" registered.");
-  }
-
-  return converter(component);
-}
-
-exports.convertComponent = convertComponent;
-
-function renderInDom(context, element, component, props) {
-  var portalId = 'data-portal-id';
-  var parent = element;
-
-  while (parent) {
-    if (parent instanceof Element && parent.hasAttribute(portalId)) {
-      var portal = react_dom_1.createPortal(react_1.createElement(component, props), element);
-      var id = parent.getAttribute(portalId);
-      context.showPortal(id, portal);
-      return id;
-    }
-
-    parent = parent.parentNode || parent.host;
-  }
-
-  return undefined;
-}
-
-exports.renderInDom = renderInDom;
-},{"react":"../node_modules/react/index.js","react-dom":"../node_modules/react-dom/index.js"}],"../node_modules/piral-core/lib/utils/guid.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-function rand(c) {
-  var r = Math.random() * 16 | 0;
-  var v = c === 'x' ? r : r & 0x3 | 0x8;
-  return v.toString(16);
-}
-
-function generateId() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, rand);
-}
-
-exports.generateId = generateId;
-
-function buildName(prefix, name) {
-  return prefix + "://" + name;
-}
-
-exports.buildName = buildName;
-},{}],"../node_modules/piral-core/lib/utils/helpers.js":[function(require,module,exports) {
-"use strict";
-
-function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var tslib_1 = require("tslib"); // tslint:disable-next-line
-
-
-exports.removeIndicator = null;
-
-function prependItem(items, item) {
-  return tslib_1.__spreadArrays([item], items || []);
-}
-
-exports.prependItem = prependItem;
-
-function appendItem(items, item) {
-  return tslib_1.__spreadArrays(items || [], [item]);
-}
-
-exports.appendItem = appendItem;
-
-function prependItems(items, newItems) {
-  return tslib_1.__spreadArrays(newItems, items || []);
-}
-
-exports.prependItems = prependItems;
-
-function appendItems(items, newItems) {
-  return tslib_1.__spreadArrays(items || [], newItems);
-}
-
-exports.appendItems = appendItems;
-
-function excludeItem(items, item) {
-  return (items || []).filter(function (m) {
-    return m !== item;
-  });
-}
-
-exports.excludeItem = excludeItem;
-
-function includeItem(items, item) {
-  return prependItem(excludeItem(items, item), item);
-}
-
-exports.includeItem = includeItem;
-
-function replaceOrAddItem(items, item, predicate) {
-  var newItems = tslib_1.__spreadArrays(items || []);
-
-  for (var i = 0; i < newItems.length; i++) {
-    if (predicate(newItems[i])) {
-      newItems[i] = item;
-      return newItems;
-    }
-  }
-
-  newItems.push(item);
-  return newItems;
-}
-
-exports.replaceOrAddItem = replaceOrAddItem;
-
-function removeNested(obj, predicate) {
-  return Object.keys(obj).reduce(function (entries, key) {
-    var item = obj[key];
-    entries[key] = Object.keys(item).reduce(function (all, key) {
-      var value = item[key];
-
-      if (Array.isArray(value)) {
-        all[key] = excludeOn(value, predicate);
-      } else if (!value || !predicate(value)) {
-        all[key] = value;
-      }
-
-      return all;
-    }, {});
-    return entries;
-  }, {});
-}
-
-exports.removeNested = removeNested;
-
-function excludeOn(items, predicate) {
-  return (items || []).filter(function (m) {
-    return !predicate(m);
-  });
-}
-
-exports.excludeOn = excludeOn;
-
-function updateKey(obj, key, value) {
-  return value === exports.removeIndicator ? withoutKey(obj, key) : withKey(obj, key, value);
-}
-
-exports.updateKey = updateKey;
-
-function withKey(obj, key, value) {
-  var _a;
-
-  return tslib_1.__assign(tslib_1.__assign({}, obj), (_a = {}, _a[key] = value, _a));
-}
-
-exports.withKey = withKey;
-
-function withoutKey(obj, key) {
-  var _a = obj || {},
-      _b = key,
-      _ = _a[_b],
-      newObj = tslib_1.__rest(_a, [_typeof(_b) === "symbol" ? _b : _b + ""]);
-
-  return newObj;
-}
-
-exports.withoutKey = withoutKey;
-},{"tslib":"../node_modules/tslib/tslib.es6.js"}],"../node_modules/piral-core/lib/utils/media.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.defaultLayouts = ['desktop', 'tablet', 'mobile'];
-exports.defaultBreakpoints = ['(min-width: 991px)', '(min-width: 481px)', '(max-width: 480px)'];
-var mm = typeof window === 'undefined' ? function () {
-  return {
-    matches: []
-  };
-} : function (q) {
-  return window.matchMedia(q);
-};
-
-function getCurrentLayout(breakpoints, layouts, defaultLayout) {
-  var query = breakpoints.findIndex(function (q) {
-    return mm(q).matches;
-  });
-  var layout = layouts[query];
-  return layout !== undefined ? layout : defaultLayout;
-}
-
-exports.getCurrentLayout = getCurrentLayout;
-},{}],"../node_modules/piral-core/lib/utils/react.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var React = require("react");
-
-function defaultRender(children, key) {
-  return React.createElement(React.Fragment, {
-    key: key
-  }, children);
-}
-
-exports.defaultRender = defaultRender;
-},{"react":"../node_modules/react/index.js"}],"../node_modules/piral-core/lib/utils/storage.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-var crx = /\s*(.*?)=(.*?)($|;|,(?! ))/g;
-exports.storage = {
-  setItem: function setItem(name, data) {
-    return localStorage.setItem(name, data);
-  },
-  getItem: function getItem(name) {
-    return localStorage.getItem(name);
-  },
-  removeItem: function removeItem(name) {
-    return localStorage.removeItem(name);
-  }
-};
-exports.cookie = {
-  setItem: function setItem(name, data, expires) {
-    if (expires === void 0) {
-      expires = '';
-    }
-
-    var domain = location.hostname;
-    var domainPart = domain ? "domain=." + domain + ";" : '';
-    document.cookie = name + "=" + encodeURIComponent(data) + ";expires=\"" + expires + "\";path=/;" + domainPart;
-  },
-  getItem: function getItem(name) {
-    return document.cookie.replace(crx, function (_m, p1, p2) {
-      return name === p1 ? p2 : '';
-    });
-  },
-  removeItem: function removeItem(name) {
-    this.setItem(name, '', '-1');
-  }
-};
-},{}],"../node_modules/piral-core/lib/utils/index.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var tslib_1 = require("tslib");
-
-tslib_1.__exportStar(require("./compare"), exports);
-
-tslib_1.__exportStar(require("./data"), exports);
-
-tslib_1.__exportStar(require("./events"), exports);
-
-tslib_1.__exportStar(require("./foreign"), exports);
-
-tslib_1.__exportStar(require("./guid"), exports);
-
-tslib_1.__exportStar(require("./helpers"), exports);
-
-tslib_1.__exportStar(require("./media"), exports);
-
-tslib_1.__exportStar(require("./react"), exports);
-
-tslib_1.__exportStar(require("./storage"), exports);
-},{"tslib":"../node_modules/tslib/tslib.es6.js","./compare":"../node_modules/piral-core/lib/utils/compare.js","./data":"../node_modules/piral-core/lib/utils/data.js","./events":"../node_modules/piral-core/lib/utils/events.js","./foreign":"../node_modules/piral-core/lib/utils/foreign.js","./guid":"../node_modules/piral-core/lib/utils/guid.js","./helpers":"../node_modules/piral-core/lib/utils/helpers.js","./media":"../node_modules/piral-core/lib/utils/media.js","./react":"../node_modules/piral-core/lib/utils/react.js","./storage":"../node_modules/piral-core/lib/utils/storage.js"}],"../node_modules/piral-core/lib/actions/app.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var tslib_1 = require("tslib");
-
-var react_1 = require("react");
-
-var utils_1 = require("../utils");
-
-function changeLayout(ctx, current) {
-  ctx.dispatch(function (state) {
-    return tslib_1.__assign(tslib_1.__assign({}, state), {
-      app: utils_1.withKey(state.app, 'layout', current)
-    });
-  });
-}
-
-exports.changeLayout = changeLayout;
-
-function initialize(ctx, loading, error, modules) {
-  ctx.dispatch(function (state) {
-    return tslib_1.__assign(tslib_1.__assign({}, state), {
-      app: tslib_1.__assign(tslib_1.__assign({}, state.app), {
-        error: error,
-        loading: loading
-      }),
-      modules: modules
-    });
-  });
-}
-
-exports.initialize = initialize;
-
-function injectPilet(ctx, pilet) {
-  ctx.dispatch(function (state) {
-    return tslib_1.__assign(tslib_1.__assign({}, state), {
-      modules: utils_1.replaceOrAddItem(state.modules, pilet, function (m) {
-        return m.name === pilet.name;
-      }),
-      registry: utils_1.removeNested(state.registry, function (m) {
-        return m.pilet === pilet.name;
-      })
-    });
-  });
-}
-
-exports.injectPilet = injectPilet;
-
-function setComponent(ctx, name, component) {
-  ctx.dispatch(function (state) {
-    return tslib_1.__assign(tslib_1.__assign({}, state), {
-      components: utils_1.withKey(state.components, name, component)
-    });
-  });
-}
-
-exports.setComponent = setComponent;
-
-function setErrorComponent(ctx, type, component) {
-  ctx.dispatch(function (state) {
-    return tslib_1.__assign(tslib_1.__assign({}, state), {
-      errorComponents: utils_1.withKey(state.errorComponents, type, component)
-    });
-  });
-}
-
-exports.setErrorComponent = setErrorComponent;
-
-function setRoute(ctx, path, component) {
-  ctx.dispatch(function (state) {
-    return tslib_1.__assign(tslib_1.__assign({}, state), {
-      routes: utils_1.withKey(state.routes, path, component)
-    });
-  });
-}
-
-exports.setRoute = setRoute;
-
-function includeProvider(ctx, provider) {
-  ctx.dispatch(function (state) {
-    return tslib_1.__assign(tslib_1.__assign({}, state), {
-      provider: !state.provider ? provider : react_1.cloneElement(provider, undefined, state.provider)
-    });
-  });
-}
-
-exports.includeProvider = includeProvider;
-},{"tslib":"../node_modules/tslib/tslib.es6.js","react":"../node_modules/react/index.js","../utils":"../node_modules/piral-core/lib/utils/index.js"}],"../node_modules/piral-core/lib/actions/components.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var tslib_1 = require("tslib");
-
-var utils_1 = require("../utils");
-
-function registerPage(ctx, name, value) {
-  ctx.dispatch(function (state) {
-    return tslib_1.__assign(tslib_1.__assign({}, state), {
-      registry: tslib_1.__assign(tslib_1.__assign({}, state.registry), {
-        pages: utils_1.withKey(state.registry.pages, name, value)
-      })
-    });
-  });
-}
-
-exports.registerPage = registerPage;
-
-function unregisterPage(ctx, name) {
-  ctx.dispatch(function (state) {
-    return tslib_1.__assign(tslib_1.__assign({}, state), {
-      registry: tslib_1.__assign(tslib_1.__assign({}, state.registry), {
-        pages: utils_1.withoutKey(state.registry.pages, name)
-      })
-    });
-  });
-}
-
-exports.unregisterPage = unregisterPage;
-
-function registerExtension(ctx, name, value) {
-  ctx.dispatch(function (state) {
-    return tslib_1.__assign(tslib_1.__assign({}, state), {
-      registry: tslib_1.__assign(tslib_1.__assign({}, state.registry), {
-        extensions: utils_1.withKey(state.registry.extensions, name, utils_1.appendItem(state.registry.extensions[name], value))
-      })
-    });
-  });
-}
-
-exports.registerExtension = registerExtension;
-
-function unregisterExtension(ctx, name, reference) {
-  ctx.dispatch(function (state) {
-    return tslib_1.__assign(tslib_1.__assign({}, state), {
-      registry: tslib_1.__assign(tslib_1.__assign({}, state.registry), {
-        extensions: utils_1.withKey(state.registry.extensions, name, utils_1.excludeOn(state.registry.extensions[name], function (m) {
-          return m.reference === reference;
-        }))
-      })
-    });
-  });
-}
-
-exports.unregisterExtension = unregisterExtension;
-},{"tslib":"../node_modules/tslib/tslib.es6.js","../utils":"../node_modules/piral-core/lib/utils/index.js"}],"../node_modules/piral-core/lib/actions/data.js":[function(require,module,exports) {
-"use strict";
-
-function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var tslib_1 = require("tslib");
-
-var utils_1 = require("../utils");
-
-function resetData(ctx) {
-  ctx.dispatch(function (state) {
-    return tslib_1.__assign(tslib_1.__assign({}, state), {
-      data: {}
-    });
-  });
-}
-
-exports.resetData = resetData;
-
-function readDataItem(ctx, key) {
-  return ctx.readState(function (state) {
-    return state.data[key];
-  });
-}
-
-exports.readDataItem = readDataItem;
-
-function readDataValue(ctx, key) {
-  var item = readDataItem(ctx, key);
-  return item && item.value;
-}
-
-exports.readDataValue = readDataValue;
-
-function writeDataItem(ctx, key, value, owner, target, expires) {
-  var isNull = !value && _typeof(value) === 'object';
-  var data = isNull ? value : {
-    value: value,
-    owner: owner,
-    target: target,
-    expires: expires
-  };
-  ctx.dispatch(function (state) {
-    return tslib_1.__assign(tslib_1.__assign({}, state), {
-      data: utils_1.updateKey(state.data, key, data)
-    });
-  });
-  ctx.emit('store-data', {
-    name: key,
-    target: target,
-    value: value,
-    owner: owner,
-    expires: expires
-  });
-}
-
-exports.writeDataItem = writeDataItem;
-
-function tryWriteDataItem(ctx, key, value, owner, target, expires) {
-  var item = readDataItem(ctx, key);
-
-  if (item && item.owner !== owner) {
-    console.error("Invalid data write to '" + key + "'. This item currently belongs to '" + item.owner + "' (write attempted from '" + owner + "'). The action has been ignored.");
-    return false;
-  }
-
-  writeDataItem(ctx, key, value, owner, target, expires);
-  return true;
-}
-
-exports.tryWriteDataItem = tryWriteDataItem;
-},{"tslib":"../node_modules/tslib/tslib.es6.js","../utils":"../node_modules/piral-core/lib/utils/index.js"}],"../node_modules/piral-core/lib/actions/define.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-function defineAction(ctx, actionName, action) {
-  ctx[actionName] = action.bind(ctx, ctx);
-}
-
-exports.defineAction = defineAction;
-
-function defineActions(ctx, actions) {
-  for (var _i = 0, _a = Object.keys(actions); _i < _a.length; _i++) {
-    var actionName = _a[_i];
-    var action = actions[actionName];
-    defineAction(ctx, actionName, action);
-  }
-}
-
-exports.defineActions = defineActions;
-},{}],"../node_modules/piral-core/lib/actions/portal.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var tslib_1 = require("tslib");
-
-var utils_1 = require("../utils");
-
-function destroyPortal(ctx, id) {
-  ctx.dispatch(function (state) {
-    return tslib_1.__assign(tslib_1.__assign({}, state), {
-      portals: utils_1.withoutKey(state.portals, id)
-    });
-  });
-}
-
-exports.destroyPortal = destroyPortal;
-
-function showPortal(ctx, id, entry) {
-  ctx.dispatch(function (state) {
-    return tslib_1.__assign(tslib_1.__assign({}, state), {
-      portals: utils_1.withKey(state.portals, id, utils_1.includeItem(state.portals[id], entry))
-    });
-  });
-}
-
-exports.showPortal = showPortal;
-},{"tslib":"../node_modules/tslib/tslib.es6.js","../utils":"../node_modules/piral-core/lib/utils/index.js"}],"../node_modules/@libre/atom/dist/index.esm.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.addChangeHandler = addChangeHandler;
-exports.removeChangeHandler = removeChangeHandler;
-exports.deref = deref;
-exports.getValidator = getValidator;
-exports.set = set;
-exports.setValidator = setValidator;
-exports.swap = swap;
-exports.Atom = void 0;
-var nextAtomUid = 0;
-var stateByAtomId = Object.create(null);
-var validatorByAtomId = Object.create(null);
-var changeHandlersByAtomId = {};
-/** @ignore */
-
-function _useNextAtomId() {
-  return nextAtomUid++;
-}
-/** @ignore */
-
-
-function _getState(atom) {
-  return stateByAtomId[atom["$$id"]];
-}
-/** @ignore */
-
-
-function _setState(atom, state) {
-  stateByAtomId[atom["$$id"]] = state;
-}
-/** @ignore */
-
-
-function _getValidator(atom) {
-  return validatorByAtomId[atom["$$id"]];
-}
-/** @ignore */
-
-
-function _setValidator(atom, validator) {
-  validatorByAtomId[atom["$$id"]] = validator;
-}
-/** @ignore */
-
-
-function _initChangeHandlerDict(atom) {
-  changeHandlersByAtomId[atom["$$id"]] = {};
-}
-/** @ignore */
-
-
-function _addChangeHandler(atom, key, handler) {
-  if (typeof changeHandlersByAtomId[atom["$$id"]][key] === "function") {
-    throw new Error("Change handler already registered for key \"" + key + "\" on " + atom + ".\nRemove the existing handler before registering a new one.");
-  }
-
-  changeHandlersByAtomId[atom["$$id"]][key] = handler;
-}
-/** @ignore */
-
-
-function _removeChangeHandler(atom, key) {
-  delete changeHandlersByAtomId[atom["$$id"]][key];
-}
-/** @ignore */
-
-
-function _runChangeHandlers(atom, previous, current) {
-  Object.keys(changeHandlersByAtomId[atom["$$id"]]).forEach(function (k) {
-    if (typeof changeHandlersByAtomId[atom["$$id"]][k] === "function") {
-      changeHandlersByAtomId[atom["$$id"]][k]({
-        previous: previous,
-        current: current
-      });
-    }
-  });
-}
-/**
- * Registers a function to be run each time the state of `atom` changes.
- *
- * Will throw an Error if `key` is already taken by another handler.
- *
- * @example
-```js
-
-import {Atom, addChangeHandler, swap} from '@libre/atom'
-
-const countAtom = Atom.of({ count: 0 })
-
-addChangeHandler(countAtom, "log", ({current, previous}) => {
-  console.log(previous, current)
-})
-
-swap(countAtom, (state) => ({ count: state.count + 1 }))
-
-
-// stdout logs:
-// { count: 0 }
-// { count: 1 }
-
-```
- */
-
-
-function addChangeHandler(atom, key, handler) {
-  _addChangeHandler(atom, key, handler);
-}
-/**
- * Deletes the `key` and the handler associated with `key` so that it not longer runs
- * when the state of `atom` changes.
- *
- * @example
-```js
-
-import {Atom, addChangeHandler, removeChangeHandler, swap} from '@libre/atom'
-
-const countAtom = Atom.of({ count: 0 })
-
-addChangeHandler(countAtom, "log", ({current, previous}) => {
-  console.log(previous, current)
-})
-
-swap(countAtom, (state) => ({ count: state.count + 1 }))
-
-// stdout logs:
-// { count: 0 }
-// { count: 1 }
-
-removeChangeHandler(atom, "log")
-
-swap(countAtom, (state) => ({ count: state.count + 1 }))
-
-// nothing is logged
-```
- */
-
-
-function removeChangeHandler(atom, key) {
-  _removeChangeHandler(atom, key);
-}
-/** @ignore */
-
-
-function prettyPrint(val) {
-  return JSON.stringify(val, null, "  ");
-}
-/**
- * A data structure useful for providing a controlled, predictable mechanism for mutability.
- * Allows multiple components of a program to share read/write access to some state in such
- * a way that no component can mutate another component's current reference to the state in
- * the middle of some process or asynchronous operation.
- *
- */
-
-
-var Atom =
-/** @class */
-function () {
-  /** @ignore */
-  function Atom(state, _a) {
-    var validator = (_a === void 0 ? {} : _a).validator;
-
-    validator = validator || function () {
-      return true;
-    };
-
-    if (!validator(state)) {
-      var errMsg = "Atom initialized with invalid state:\n\n" + prettyPrint(state) + "\n\naccording to validator function:\n" + validator + "\n\n";
-      var err = Error(errMsg);
-      err.name = "AtomInvalidStateError";
-      throw err;
-    }
-
-    Object.defineProperty(this, "$$id", {
-      value: _useNextAtomId()
-    });
-
-    _setState(this, state);
-
-    _setValidator(this, validator);
-
-    _initChangeHandlerDict(this);
-
-    return this;
-  }
-  /**
-   * Constructs a new instance of [[Atom]] with its internal state
-   * set to `state`.
-   *
-   * @param S the type of the value being set as an [[Atom]]'s internal state
-   * @example
-  ```js
-   import { Atom } from '@libre/atom'
-   const a1 = Atom.of(0)
-  const a2 = Atom.of("zero")
-  const a3 = Atom.of({ count: 0 })
-  ```
-   */
-
-
-  Atom.of = function (state, options) {
-    return new Atom(state, options);
-  };
-  /** @ignore */
-
-
-  Atom.prototype.toString = function () {
-    return "Atom<" + prettyPrint(_getState(this)) + ">";
-  };
-  /** @ignore */
-
-
-  Atom.prototype.inspect = function () {
-    return this.toString();
-  };
-
-  return Atom;
-}();
-/** @ignore */
-
-
-exports.Atom = Atom;
-var expectedAtomButGot = "Expected an Atom instances, but got:";
-/** @ignore */
-
-function throwIfNotAtom(atom) {
-  if (!(atom instanceof Atom)) {
-    throw TypeError(expectedAtomButGot + "\n\n" + prettyPrint(atom));
-  }
-}
-/**
- * Dereferences (i.e. "*reads*") the current state of an [[Atom]]. The dereferenced value
- * should ___not___ be mutated.
- *
- * @param <S> the type of `atom`'s inner state
- *
- * @example
-```js
-
-import {Atom, deref} from '@libre/atom'
-
-const stateAtom = Atom.of({ count: 0 })
-
-deref(stateAtom) // => { count: 0 }
-```
- */
-
-
-function deref(atom) {
-  throwIfNotAtom(atom);
-  return _getState(atom);
-}
-/**
- * Gets `atom`'s validator function
- *
- * @param <S> the type of `atom`'s inner state
- *
- * @example
-```js
-
-import {Atom, deref, getValidator, swap} from '@libre/atom'
-
-const atom = Atom.of({ count: 0 }, { validator: (state) => isEven(state.count) })
-const validator = getValidator(atom)
-validator({ count: 3 }) // => false
-validator({ count: 2 }) // => true
-```
- */
-
-
-function getValidator(atom) {
-  throwIfNotAtom(atom);
-  return _getValidator(atom);
-}
-/**
- * Sets `atom`s state to `nextState`.
- *
- * It is equivalent to `swap(atom, () => newState)`.
- *
- * @param <S> the type of `atom`'s inner state
- * @param atom an instance of [[Atom]]
- * @param nextState the value to which to set the state; it should be the same type/interface as current state
- *
-  * @example
-```js
-
-import {Atom, deref, set} from '@libre/atom'
-
-const atom = Atom.of({ count: 0 })
-
-set(atom, { count: 100 })
-deref(atom) // => { count: 100 }
-```
- */
-
-
-function set(atom, nextState) {
-  throwIfNotAtom(atom);
-
-  var validator = _getValidator(atom);
-
-  var didValidate = validator(nextState);
-
-  if (!didValidate) {
-    var errMsg = "Attempted to set the state of\n\n" + atom + "\n\nwith:\n\n" + prettyPrint(nextState) + "\n\nbut it did not pass validator:\n" + validator + "\n\n";
-    var err = Error(errMsg);
-    err.name = "AtomInvalidStateError";
-    throw err;
-  } else {
-    var prevState = deref(atom);
-
-    _setState(atom, nextState);
-
-    _runChangeHandlers(atom, prevState, nextState);
-  }
-}
-/**
- * Sets the `validator` for `atom`. `validator` must be a pure function of one argument,
- * which will be passed the intended new state on any state change. If the new state is
- * unacceptable, `validator` should return false or throw an exception. If the current state
- * is not acceptable to the new validator, an exception will be thrown and the validator will
- * not be changed.
- *
- * @param <S> the type of `atom`'s inner state
- *
- * @example
-```js
-
-import {Atom, deref, setValidator, set} from '@libre/atom'
-import { _setValidator } from './internal-state';
-
-const atom = Atom.of({ count: 0 }, {validator: (state) => isNumber(state.count) })
-setValidator(atom, (state) => isOdd(state.count)) // Error; new validator rejected
-set(atom, {count: "not number"}) // Error; new state not set
-setValidator(atom, (state) => isEven(state.count)) // All good
-set(atom, {count: 2}) // All good
-
-```
- */
-
-
-function setValidator(atom, validator) {
-  throwIfNotAtom(atom);
-
-  if (!validator(_getState(atom))) {
-    var errMsg = "Could not set validator on\n\n" + atom + "\n\nbecause current state would be invalid according to new validator:\n" + validator + "\n\n";
-    var err = Error(errMsg);
-    err.name = "AtomInvalidStateError";
-    throw err;
-  } else {
-    _setValidator(atom, validator);
-  }
-}
-/**
- * Swaps `atom`'s state with the value returned from applying `updateFn` to `atom`'s
- * current state. `updateFn` should be a pure function and ___not___ mutate `state`.
- *
- * @param <S> the type of `atom`'s inner state
- * @param atom an instance of [[Atom]]
- * @param updateFn a pure function that takes the current state and returns the next state; the next state should be of the same type/interface as the current state;
- *
- * @example
- * ```jsx
- *
- *import {Atom, swap} from '@libre/atom'
-import {prettyPrint} from './prettyPrint'
- *
- *const stateAtom = Atom.of({ count: 0 })
- *const increment = () => swap(stateAtom, (state) => ({
- *  count: state.count + 1
- *}));
- * ```
- */
-
-
-function swap(atom, updateFn) {
-  throwIfNotAtom(atom);
-
-  var prevState = _getState(atom);
-
-  var nextState = updateFn(prevState);
-
-  var validator = _getValidator(atom);
-
-  var didValidate = validator(nextState);
-
-  if (!didValidate) {
-    var errMsg = "swap updateFn\n" + updateFn + "\n\nattempted to swap the state of\n\n" + atom + "\n\nwith:\n\n" + prettyPrint(nextState) + "\n\nbut it did not pass validator:\n" + validator + "\n\n";
-    var err = Error(errMsg);
-    err.name = "AtomInvalidStateError";
-    throw err;
-  } else {
-    _setState(atom, nextState);
-
-    _runChangeHandlers(atom, prevState, nextState);
-  }
-}
-},{}],"../node_modules/@dbeining/react-atom/dist/react-atom.js":[function(require,module,exports) {
-var define;
-function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
-
-!function (e, t) {
-  "object" == (typeof exports === "undefined" ? "undefined" : _typeof(exports)) && "object" == (typeof module === "undefined" ? "undefined" : _typeof(module)) ? module.exports = t() : "function" == typeof define && define.amd ? define([], t) : "object" == (typeof exports === "undefined" ? "undefined" : _typeof(exports)) ? exports.reactAtom = t() : e.reactAtom = t();
-}("undefined" != typeof self ? self : this, function () {
-  return function (e) {
-    var t = {};
-
-    function o(r) {
-      if (t[r]) return t[r].exports;
-      var n = t[r] = {
-        i: r,
-        l: !1,
-        exports: {}
-      };
-      return e[r].call(n.exports, n, n.exports, o), n.l = !0, n.exports;
-    }
-
-    return o.m = e, o.c = t, o.d = function (e, t, r) {
-      o.o(e, t) || Object.defineProperty(e, t, {
-        enumerable: !0,
-        get: r
-      });
-    }, o.r = function (e) {
-      "undefined" != typeof Symbol && Symbol.toStringTag && Object.defineProperty(e, Symbol.toStringTag, {
-        value: "Module"
-      }), Object.defineProperty(e, "__esModule", {
-        value: !0
-      });
-    }, o.t = function (e, t) {
-      if (1 & t && (e = o(e)), 8 & t) return e;
-      if (4 & t && "object" == _typeof(e) && e && e.__esModule) return e;
-      var r = Object.create(null);
-      if (o.r(r), Object.defineProperty(r, "default", {
-        enumerable: !0,
-        value: e
-      }), 2 & t && "string" != typeof e) for (var n in e) {
-        o.d(r, n, function (t) {
-          return e[t];
-        }.bind(null, n));
-      }
-      return r;
-    }, o.n = function (e) {
-      var t = e && e.__esModule ? function () {
-        return e.default;
-      } : function () {
-        return e;
-      };
-      return o.d(t, "a", t), t;
-    }, o.o = function (e, t) {
-      return Object.prototype.hasOwnProperty.call(e, t);
-    }, o.p = "", o(o.s = 1);
-  }([function (e, t) {
-    e.exports = require("@libre/atom");
-  }, function (e, t, o) {
-    "use strict";
-
-    Object.defineProperty(t, "__esModule", {
-      value: !0
-    }), function (e) {
-      for (var o in e) {
-        t.hasOwnProperty(o) || (t[o] = e[o]);
-      }
-    }(o(0));
-    var r = o(2);
-    t.initialize = r.initialize, t.useAtom = r.useAtom;
-  }, function (e, t, o) {
-    "use strict";
-
-    var r = this && this.__importStar || function (e) {
-      if (e && e.__esModule) return e;
-      var t = {};
-      if (null != e) for (var o in e) {
-        Object.hasOwnProperty.call(e, o) && (t[o] = e[o]);
-      }
-      return t.default = e, t;
-    };
-
-    Object.defineProperty(t, "__esModule", {
-      value: !0
-    });
-    var n = o(0),
-        i = o(3),
-        u = r(o(4)),
-        a = o(5),
-        l = 0,
-        c = 0;
-
-    function s(e) {
-      var t = e.useLayoutEffect,
-          o = e.useMemo,
-          r = e.useState;
-      return l += 1, {
-        Atom: n.Atom,
-        addChangeHandler: n.addChangeHandler,
-        deref: n.deref,
-        getValidator: n.getValidator,
-        removeChangeHandler: n.removeChangeHandler,
-        set: n.set,
-        setValidator: n.setValidator,
-        swap: n.swap,
-        useAtom: function useAtom(e, i) {
-          var l;
-
-          if (!(e instanceof n.Atom)) {
-            var s = JSON.stringify(e, null, "  ");
-            throw TypeError(u.calledUseAtomWithNonAtom + "\n" + s);
-          }
-
-          var f,
-              d = (i || {
-            select: null
-          }).select,
-              m = n.deref(e),
-              p = d || function (e) {
-            return e;
-          };
-
-          try {
-            p = o(function () {
-              return a.memoLast(p);
-            }, [d]), l = r({}), f = l[1];
-          } catch (e) {
-            throw new TypeError(u.calledUseAtomOutsideFunctionComponent);
-          }
-
-          return t(function () {
-            var t = f["@@react-atom/hook_id"] ? f["@@react-atom/hook_id"] : "hook#" + ++c;
-            return f["@@react-atom/hook_id"] = t, n.addChangeHandler(e, f["@@react-atom/hook_id"], function (e) {
-              var t = e.previous,
-                  o = e.current;
-              a.isShallowEqual(p(t), p(o)) || f({});
-            }), function () {
-              n.removeChangeHandler(e, f["@@react-atom/hook_id"]);
-            };
-          }, [f, d]), p(m);
-        }
-      };
-    }
-
-    t.initialize = s, t.useAtom = function (e, t) {
-      if (l > 1) throw Error(u.multipleInstantiations);
-      var o = (t || {
-        select: null
-      }).select;
-      return o ? f(e, {
-        select: o
-      }) : f(e);
-    };
-    var f = s({
-      useLayoutEffect: i.useLayoutEffect,
-      useMemo: i.useMemo,
-      useState: i.useState
-    }).useAtom;
-  }, function (e, t) {
-    e.exports = require("react");
-  }, function (e, t, o) {
-    "use strict";
-
-    Object.defineProperty(t, "__esModule", {
-      value: !0
-    }), t.calledUseAtomOutsideFunctionComponent = "useAtom can only be called inside the body of a function component", t.calledUseAtomWithNonAtom = "useAtom only accepts `react-atom` Atoms, but got:", t.calledDerefWithNonAtom = "deref only accepts `react-atom` Atoms, but got:", t.multipleInstantiations = "Multiple instances of react-atom have been detected, which will lead to unexpected bugs in the useAtom custom hook. This usually means react-atom has been initialized with `initialize(hooks)` in addition to importing the default Atom, useAtom, etc. directly. To avoid this error, only use the implementation returned from `initialize`.";
-  }, function (e, t, o) {
-    "use strict";
-
-    function r(e, t) {
-      return e === t ? 0 !== e || 1 / e == 1 / t : e != e && t != t;
-    }
-
-    function n(e) {
-      if ("object" != _typeof(e) || null === e) return !1;
-      var t = Object.getPrototypeOf(e);
-      return t === Object.prototype || null === t;
-    }
-
-    Object.defineProperty(t, "__esModule", {
-      value: !0
-    }), t.isPOJO = n, t.isShallowEqual = function (e, t) {
-      if ([e, t].every(n) || [e, t].every(Array.isArray)) {
-        if (r(e, t)) return !0;
-        if (Object.keys(e).length !== Object.keys(t).length) return !1;
-
-        for (var o in e) {
-          if (!r(e[o], t[o])) return !1;
-        }
-
-        return !0;
-      }
-
-      return r(e, t);
-    }, t.memoLast = function (e) {
-      var t, o;
-      return function (n) {
-        return r(t, n) || (t = n, o = e(n)), o;
-      };
-    };
-  }]);
-});
-},{"@libre/atom":"../node_modules/@libre/atom/dist/index.esm.js","react":"../node_modules/react/index.js"}],"../node_modules/piral-core/lib/actions/state.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var react_atom_1 = require("@dbeining/react-atom");
-
-function dispatch(ctx, update) {
-  react_atom_1.swap(ctx.state, update);
-}
-
-exports.dispatch = dispatch;
-
-function readState(ctx, read) {
-  var state = react_atom_1.deref(ctx.state);
-  return read(state);
-}
-
-exports.readState = readState;
-},{"@dbeining/react-atom":"../node_modules/@dbeining/react-atom/dist/react-atom.js"}],"../node_modules/piral-core/lib/actions/index.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var tslib_1 = require("tslib");
-
-tslib_1.__exportStar(require("./app"), exports);
-
-tslib_1.__exportStar(require("./components"), exports);
-
-tslib_1.__exportStar(require("./data"), exports);
-
-tslib_1.__exportStar(require("./define"), exports);
-
-tslib_1.__exportStar(require("./portal"), exports);
-
-tslib_1.__exportStar(require("./state"), exports);
-},{"tslib":"../node_modules/tslib/tslib.es6.js","./app":"../node_modules/piral-core/lib/actions/app.js","./components":"../node_modules/piral-core/lib/actions/components.js","./data":"../node_modules/piral-core/lib/actions/data.js","./define":"../node_modules/piral-core/lib/actions/define.js","./portal":"../node_modules/piral-core/lib/actions/portal.js","./state":"../node_modules/piral-core/lib/actions/state.js"}],"../node_modules/piral-core/lib/state/createActions.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var tslib_1 = require("tslib");
-
-var actions = require("../actions");
-
-function createContext(state, events) {
-  var ctx = tslib_1.__assign(tslib_1.__assign({}, events), {
-    apis: {},
-    converters: {
-      html: function html(_a) {
-        var component = _a.component;
-        return component;
-      }
-    },
-    state: state
-  });
-
-  return ctx;
-}
-
-function includeActions(ctx, actions) {
-  var actionNames = Object.keys(actions);
-
-  for (var _i = 0, actionNames_1 = actionNames; _i < actionNames_1.length; _i++) {
-    var actionName = actionNames_1[_i];
-    var action = actions[actionName];
-    ctx[actionName] = action.bind(ctx, ctx);
-  }
-}
-
-exports.includeActions = includeActions;
-
-function createActions(state, events) {
-  var context = createContext(state, events);
-  includeActions(context, actions);
-  return context;
-}
-
-exports.createActions = createActions;
-},{"tslib":"../node_modules/tslib/tslib.es6.js","../actions":"../node_modules/piral-core/lib/actions/index.js"}],"../node_modules/piral-core/lib/state/stateContext.js":[function(require,module,exports) {
+},{"react-router":"../node_modules/react-router/esm/react-router.js","@babel/runtime/helpers/esm/inheritsLoose":"../node_modules/@babel/runtime/helpers/esm/inheritsLoose.js","react":"../node_modules/react/index.js","history":"../node_modules/history/esm/history.js","prop-types":"../node_modules/prop-types/index.js","tiny-warning":"../node_modules/tiny-warning/dist/tiny-warning.esm.js","@babel/runtime/helpers/esm/extends":"../node_modules/@babel/runtime/helpers/esm/extends.js","@babel/runtime/helpers/esm/objectWithoutPropertiesLoose":"../node_modules/@babel/runtime/helpers/esm/objectWithoutPropertiesLoose.js","tiny-invariant":"../node_modules/tiny-invariant/dist/tiny-invariant.esm.js"}],"../node_modules/piral-core/lib/state/stateContext.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -36259,7 +36259,7 @@ function createPiletOptions(_a) {
         context: context
       },
       build: {
-        date: "2020-05-25T12:32:49.256Z",
+        date: "2020-05-25T13:39:35.041Z",
         cli: "0.11.5",
         compat: "0.11"
       },
@@ -38476,114 +38476,6 @@ exports.DashboardPilet = {
     });
   }
 };
-},{"tslib":"../node_modules/tslib/tslib.es6.js","react":"../node_modules/react/index.js"}],"pilets/pilet1.tsx":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.Pilet1 = void 0;
-
-var tslib_1 = require("tslib");
-
-var React = tslib_1.__importStar(require("react"));
-/**
- * Shows the general usage of the `setup` function together
- * with some tile and page registrations.
- * Also registeres some custom error page handlers. For details
- * on this, see DashboardModule.
- */
-
-
-exports.Pilet1 = {
-  content: '',
-  name: 'Example Module',
-  version: '1.0.0',
-  hash: '1',
-  setup: function setup(piral) {
-    console.log(piral);
-    piral.registerTile({
-      component: {
-        mount: function mount(element, props) {
-          element.innerHTML = "\n            <div class=\"tile\">\n              General rendering for a ".concat(props.columns, "x").concat(props.rows, " tile.\n            </div>\n          ");
-        }
-      },
-      type: 'html'
-    });
-    piral.registerTile('example-react', function () {
-      return React.createElement("div", {
-        className: "tile"
-      }, "Rendered a tile from React.", React.createElement("div", null, React.createElement("button", {
-        onClick: function onClick() {
-          return piral.unregisterTile('example-react');
-        }
-      }, "Unregister me!")));
-    });
-    piral.registerMenu(function () {
-      return React.createElement("a", {
-        href: "http://www.google.com?q=piral",
-        target: "_blank"
-      }, "Google");
-    }, {
-      type: 'general'
-    });
-    piral.registerPage('/example1', function () {
-      return React.createElement("div", null, React.createElement("p", null, "This is the first ", React.createElement("b", null, "example"), " page"), React.createElement("p", null, "Click for a notification."), React.createElement("ul", null, React.createElement("li", null, React.createElement("button", {
-        onClick: function onClick() {
-          return piral.showNotification('Hello there!');
-        }
-      }, "Notify me! (Default)")), React.createElement("li", null, React.createElement("button", {
-        onClick: function onClick() {
-          return piral.showNotification('Hello there!', {
-            type: 'error'
-          });
-        }
-      }, "Notify me! (Error)")), React.createElement("li", null, React.createElement("button", {
-        onClick: function onClick() {
-          return piral.showNotification('Hello there!', {
-            title: 'Some title'
-          });
-        }
-      }, "Notify me! (With Title)")), React.createElement("li", null, React.createElement("button", {
-        onClick: function onClick() {
-          return piral.showNotification('Hello there!', {
-            autoClose: 1000,
-            type: 'success'
-          });
-        }
-      }, "Notify me! (1s)")), React.createElement("li", null, React.createElement("button", {
-        onClick: function onClick() {
-          return piral.showNotification(React.createElement("span", null, "Hello there; this is ", React.createElement("b", null, "some longer text"), "!"), {
-            autoClose: 1500,
-            type: 'warning'
-          });
-        }
-      }, "Notify me! (longer, formatted text 1.5s)"))));
-    });
-    piral.registerPage('/example2', function (_ref) {
-      var piral = _ref.piral;
-      return React.createElement("div", null, React.createElement("p", null, "This is the second ", React.createElement("b", null, "example"), " page"), React.createElement("p", null, "IF YOU ARE IN AN ADVENTUROUS MOOD TRY", ' ', React.createElement("a", {
-        onClick: function onClick(e) {
-          piral.unregisterPage('/example2');
-          e.preventDefault();
-        },
-        href: "#"
-      }, "THIS LINK"), "."));
-    });
-    piral.registerExtension('error', function () {
-      return React.createElement("div", null, "Custom Error page");
-    });
-    piral.registerExtension('error', function (_ref2) {
-      var params = _ref2.params;
-
-      if (params.type === 'not_found') {
-        return React.createElement("div", null, "The page was not found!!!");
-      }
-
-      return false;
-    });
-  }
-};
 },{"tslib":"../node_modules/tslib/tslib.es6.js","react":"../node_modules/react/index.js"}],"pilets/pilet2.tsx":[function(require,module,exports) {
 "use strict";
 
@@ -38627,7 +38519,7 @@ exports.Pilet2 = {
         return new Promise(function (resolve) {
           return setTimeout(function () {
             return resolve(['one', 'two', 'three']);
-          }, 2000);
+          }, 20);
         });
       },
       connect: function connect(cb) {
@@ -38646,26 +38538,74 @@ exports.Pilet2 = {
     piral.registerTile(function () {
       return React.createElement("div", {
         className: "tile"
-      }, "Rendered tile from another module.");
+      }, "Rendered tile from another module. ", React.createElement(react_router_dom_1.Link, {
+        to: "/newpage"
+      }, "New Page"));
     });
-    piral.registerMenu(function () {
-      return React.createElement(react_router_dom_1.Link, {
-        to: "/example3"
-      }, "Example 3");
-    }, {
-      type: 'general'
-    });
-    piral.registerPage('/example3', connect(function (_ref) {
-      var data = _ref.data;
-      return React.createElement("div", null, React.createElement("b", null, "This is the example page from module 2 (sample module)!"), React.createElement("p", null, "Loaded the following data:"), React.createElement("ul", null, data.map(function (item, i) {
-        return React.createElement("li", {
-          key: i
-        }, item);
-      })));
+    piral.registerPage('/newpage', connect(function () {
+      return React.createElement("div", null, React.createElement("h1", null, "New Page"), React.createElement(react_router_dom_1.Link, {
+        to: "/"
+      }, "back"));
     }));
   }
 };
-},{"tslib":"../node_modules/tslib/tslib.es6.js","react":"../node_modules/react/index.js","react-router-dom":"../node_modules/react-router-dom/esm/react-router-dom.js"}],"pilets/index.ts":[function(require,module,exports) {
+},{"tslib":"../node_modules/tslib/tslib.es6.js","react":"../node_modules/react/index.js","react-router-dom":"../node_modules/react-router-dom/esm/react-router-dom.js"}],"pilets/container.tsx":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.ContainerPilet = void 0;
+
+var tslib_1 = require("tslib");
+
+var React = tslib_1.__importStar(require("react"));
+
+var MyTile = function MyTile(_ref) {
+  var count = _ref.count,
+      increment = _ref.increment;
+  return React.createElement("div", {
+    className: "tile"
+  }, React.createElement("div", null, React.createElement("b", null, "Preserves the count")), React.createElement("button", {
+    onClick: increment
+  }, count));
+};
+/**
+ * Shows an advanced usage of the global state container.
+ */
+
+
+exports.ContainerPilet = {
+  content: '',
+  name: 'Container Module',
+  version: '1.0.0',
+  hash: '14',
+  setup: function setup(piral) {
+    var connect = piral.createState({
+      state: {
+        count: 0
+      },
+      actions: {
+        increment: function increment(dispatch) {
+          dispatch(function (state) {
+            return {
+              count: state.count + 1
+            };
+          });
+        }
+      }
+    });
+    piral.registerTile(connect(function (_ref2) {
+      var state = _ref2.state,
+          actions = _ref2.actions;
+      return React.createElement(MyTile, {
+        count: state.count,
+        increment: actions.increment
+      });
+    }));
+  }
+};
+},{"tslib":"../node_modules/tslib/tslib.es6.js","react":"../node_modules/react/index.js"}],"pilets/index.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -38675,9 +38615,9 @@ exports.availablePilets = void 0;
 
 var dashboard_1 = require("./dashboard");
 
-var pilet1_1 = require("./pilet1");
-
 var pilet2_1 = require("./pilet2");
+
+var container_1 = require("./container");
 /**
  * Normally all these pilets would come from some API and
  * would look quite different (i.e., not already evaluated etc.).
@@ -38689,8 +38629,8 @@ var pilet2_1 = require("./pilet2");
  */
 
 
-exports.availablePilets = [dashboard_1.DashboardPilet, pilet1_1.Pilet1, pilet2_1.Pilet2];
-},{"./dashboard":"pilets/dashboard.tsx","./pilet1":"pilets/pilet1.tsx","./pilet2":"pilets/pilet2.tsx"}],"close.svg":[function(require,module,exports) {
+exports.availablePilets = [dashboard_1.DashboardPilet, pilet2_1.Pilet2, container_1.ContainerPilet];
+},{"./dashboard":"pilets/dashboard.tsx","./pilet2":"pilets/pilet2.tsx","./container":"pilets/container.tsx"}],"close.svg":[function(require,module,exports) {
 module.exports = "/close.d0f0328e.svg";
 },{}],"index.tsx":[function(require,module,exports) {
 "use strict";
@@ -38733,8 +38673,6 @@ var React = tslib_1.__importStar(require("react"));
 
 var react_dom_1 = require("react-dom");
 
-var react_router_dom_1 = require("react-router-dom");
-
 var piral_core_1 = require("piral-core");
 
 var piral_menu_1 = require("piral-menu");
@@ -38773,27 +38711,6 @@ customElements.define('pi-spinner', /*#__PURE__*/function (_HTMLElement) {
 
   return _class;
 }( /*#__PURE__*/_wrapNativeSuper(HTMLElement)));
-
-var Sitemap = function Sitemap() {
-  var pages = piral_core_1.useGlobalState(function (s) {
-    return s.registry.pages;
-  });
-  return React.createElement("ul", null, React.createElement("li", null, React.createElement(react_router_dom_1.Link, {
-    to: "/"
-  }, "Go to /")), Object.keys(pages).map(function (url) {
-    return url.replace(':id', "".concat(~~(Math.random() * 1000)));
-  }).map(function (url) {
-    return React.createElement("li", {
-      key: url
-    }, React.createElement(react_router_dom_1.Link, {
-      to: url
-    }, "Go to ", url));
-  }), React.createElement("li", null, React.createElement(react_router_dom_1.Link, {
-    to: "/sitemap"
-  }, "Go to /sitemap")), React.createElement("li", null, React.createElement(react_router_dom_1.Link, {
-    to: "/not-found"
-  }, "Go to /not-found")));
-};
 
 var Notifications = function Notifications() {
   var notifications = piral_core_1.useGlobalState(function (s) {
@@ -38864,7 +38781,7 @@ var app = React.createElement(piral_core_1.Piral, {
   component: piral_dashboard_1.Dashboard
 }));
 react_dom_1.render(app, document.querySelector('#app'));
-},{"tslib":"../node_modules/tslib/tslib.es6.js","react":"../node_modules/react/index.js","react-dom":"../node_modules/react-dom/index.js","react-router-dom":"../node_modules/react-router-dom/esm/react-router-dom.js","piral-core":"../node_modules/piral-core/lib/index.js","piral-menu":"../node_modules/piral-menu/lib/index.js","piral-feeds":"../node_modules/piral-feeds/lib/index.js","piral-forms":"../node_modules/piral-forms/lib/index.js","piral-notifications":"../node_modules/piral-notifications/lib/index.js","piral-dashboard":"../node_modules/piral-dashboard/lib/index.js","piral-containers":"../node_modules/piral-containers/lib/index.js","piral-search":"../node_modules/piral-search/lib/index.js","./pilets":"pilets/index.ts","./close.svg":"close.svg"}],"../node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+},{"tslib":"../node_modules/tslib/tslib.es6.js","react":"../node_modules/react/index.js","react-dom":"../node_modules/react-dom/index.js","piral-core":"../node_modules/piral-core/lib/index.js","piral-menu":"../node_modules/piral-menu/lib/index.js","piral-feeds":"../node_modules/piral-feeds/lib/index.js","piral-forms":"../node_modules/piral-forms/lib/index.js","piral-notifications":"../node_modules/piral-notifications/lib/index.js","piral-dashboard":"../node_modules/piral-dashboard/lib/index.js","piral-containers":"../node_modules/piral-containers/lib/index.js","piral-search":"../node_modules/piral-search/lib/index.js","./pilets":"pilets/index.ts","./close.svg":"close.svg"}],"../node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;
@@ -38892,7 +38809,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "63112" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "63959" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

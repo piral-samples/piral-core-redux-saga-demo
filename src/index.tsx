@@ -20,7 +20,6 @@ import { createSearchApi, useSearch } from 'piral-search';
 import { availablePilets } from './pilets';
 
 
-
 customElements.define(
   'pi-spinner',
   class extends HTMLElement {
@@ -35,34 +34,6 @@ customElements.define(
 );
 
 
-
-
-
-
-const Sitemap: React.FC<RouteComponentProps> = () => {
-  const pages = useGlobalState(s => s.registry.pages);
-
-  return (
-    <ul>
-      <li>
-        <Link to="/">Go to /</Link>
-      </li>
-      {Object.keys(pages)
-        .map(url => url.replace(':id', `${~~(Math.random() * 1000)}`))
-        .map(url => (
-          <li key={url}>
-            <Link to={url}>Go to {url}</Link>
-          </li>
-        ))}
-      <li>
-        <Link to="/sitemap">Go to /sitemap</Link>
-      </li>
-      <li>
-        <Link to="/not-found">Go to /not-found</Link>
-      </li>
-    </ul>
-  );
-};
 
 const Notifications: React.FC = () => {
   const notifications = useGlobalState(s => s.notifications);

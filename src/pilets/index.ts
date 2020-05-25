@@ -1,6 +1,6 @@
 import { DashboardPilet } from './dashboard';
-import { Pilet1 } from './pilet1';
 import { Pilet2 } from './pilet2';
+import { ContainerPilet } from './container';
 
 /**
  * Normally all these pilets would come from some API and
@@ -11,4 +11,4 @@ import { Pilet2 } from './pilet2';
  * repository (or at least in its own folder / structure in a
  * monorepo).
  */
-export const availablePilets = [DashboardPilet, Pilet1, Pilet2];
+export const availablePilets = [DashboardPilet, Pilet2, ContainerPilet];

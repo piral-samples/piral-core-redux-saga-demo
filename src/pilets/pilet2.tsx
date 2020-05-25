@@ -16,7 +16,7 @@ export const Pilet2: Pilet = {
 
     const connect = piral.createConnector({
       initialize() {
-        return new Promise<Array<string>>(resolve => setTimeout(() => resolve(['one', 'two', 'three']), 2000));
+        return new Promise<Array<string>>(resolve => setTimeout(() => resolve(['one', 'two', 'three']), 20));
       },
       connect(cb) {
         let i = 0;
@@ -30,21 +30,14 @@ export const Pilet2: Pilet = {
       },
     });
 
-    piral.registerTile(() => <div className="tile">Rendered tile from another module.</div>);
-
-    piral.registerMenu(() => <Link to="/example3">Example 3</Link>, { type: 'general' });
+    piral.registerTile(() => <div className="tile">Rendered tile from another module. <Link to="/newpage">New Page</Link></div>);
 
     piral.registerPage(
-      '/example3',
-      connect(({ data }) => (
+      '/newpage',
+      connect(() => (
         <div>
-          <b>This is the example page from module 2 (sample module)!</b>
-          <p>Loaded the following data:</p>
-          <ul>
-            {data.map((item, i) => (
-              <li key={i}>{item}</li>
-            ))}
-          </ul>
+          <h1>New Page</h1>
+          <Link to="/">back</Link>
         </div>
       )),
     );
