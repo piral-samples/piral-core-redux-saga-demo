@@ -7,3 +7,7 @@ export interface MenuEntry {
     href: string;
     target?: string;
 }
+
+export interface PiletMenuEntry extends MenuEntry {
+    pilet: string;
+}

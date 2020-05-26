@@ -2,11 +2,11 @@ import React from 'react';
 
 import './style.scss';
 import { useSelector, useDispatch } from 'react-redux';
-import { selectMainMenuEntries, MenuEntry, removeMenuEntry } from '../../../redux';
+import { selectMainMenuEntries, PiletMenuEntry, removeMenuEntry } from '../../../redux';
 import { MenuLink } from '../../MenuLink';
 
 interface MainMenuEntryProps {
-    entry: MenuEntry;
+    entry: PiletMenuEntry;
 }
 
 const MainMenuEntry = ({ entry }: MainMenuEntryProps) => {

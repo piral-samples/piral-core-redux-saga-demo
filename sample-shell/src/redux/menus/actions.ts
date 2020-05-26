@@ -1,5 +1,5 @@
 import { actionCreator } from 'tsrux';
-import { MenuEntry, MenuType } from './types';
+import { PiletMenuEntry, MenuType } from './types';
 
 export const removeMenuEntry = actionCreator(
     'SHELL/MENU/REMOVE',
@@ -9,4 +9,4 @@ export const removeMenuEntry = actionCreator(
     }),
 );
 
-export const addMenuEntry = actionCreator('SHELL/MENU/ADD', (entry: MenuEntry) => entry);
+export const addMenuEntry = actionCreator('SHELL/MENU/ADD', (entry: PiletMenuEntry) => entry);

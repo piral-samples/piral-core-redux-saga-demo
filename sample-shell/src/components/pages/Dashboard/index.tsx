@@ -14,6 +14,7 @@ export const Dashboard = () => {
                 name: `item_${index}`,
                 label: `Link ${index}`,
                 href: '#',
+                pilet: 'root',
             }),
         );
     };

@@ -1,9 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MenuEntry } from '../../redux';
+import { PiletMenuEntry } from '../../redux';
 
 interface MenuLinkProps {
-    entry: MenuEntry;
+    entry: PiletMenuEntry;
 }
 
 // If the link starts with a slash, we assume, that the link is an internal URL and use <Link> from react-router.
