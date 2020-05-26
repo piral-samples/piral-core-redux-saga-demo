@@ -1,0 +1,13 @@
+.sample-pilet-todo-list {
+    display: flex;
+    flex-direction: column;
+    width: 300px;
+    flex-shrink: 0;
+    padding: 0.7em;
+    font-size: 1em;
+    text-align: left;
+
+    .sample-pilet--todo-entry > button {
+        margin-left: 1em;
+    }
+}

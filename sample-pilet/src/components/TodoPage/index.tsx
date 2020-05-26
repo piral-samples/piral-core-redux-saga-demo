@@ -1,9 +1,11 @@
 import React from 'react';
-import { DynamicModuleLoader } from 'redux-dynamic-modules';
-import samplePiletModule from '../../redux/module';
+import { AddTodoSection } from '../AddTodoSection';
+import { TodoList } from '../TodoList';
 
 export const TodoPage = () => (
-    <DynamicModuleLoader modules={[samplePiletModule()]}>
-        <div>Todos</div>
-    </DynamicModuleLoader>
+    <div>
+        <h1>Todo Page</h1>
+        <AddTodoSection />
+        <TodoList />
+    </div>
 );

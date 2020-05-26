@@ -39,7 +39,7 @@
     "react-router-dom": "5.2.0",
     "redux": "4.0.5",
     "redux-dynamic-modules": "5.2.3",
-    "sample-piral-core-jambit": "file:../sample-shell/dist/develop/sample-piral-core-jambit-0.11.5.tgz",
+    "sample-piral-core-jambit": "file://../sample-shell/dist/develop/sample-piral-core-jambit-0.11.5.tgz",
     "sass": "^1.17.0",
     "tslib": "1.13.0",
     "tsrux": "1.1.2",
