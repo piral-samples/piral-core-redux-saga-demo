@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { render } from 'react-dom';
 import { Provider } from 'react-redux';
-import { createInstance, Piral, SetComponent, SetRoute, PiletApi } from 'piral-core';
+import { createInstance, Piral, PiletApi, extendSharedDependencies } from 'piral-core';
 
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/pages/Dashboard';
@@ -61,9 +61,15 @@ function setupShell(app: PiletApi) {
     app.registerPage('/profile', Profile);
 }
 
+const getDependencies = extendSharedDependencies({
+    // eslint-disable-next-line global-require
+    'sample-piral-core-jambit': require('./exports'),
+});
+
 const store = configureStore();
 
 const instance = createInstance({
+    getDependencies,
     requestPilets,
     extendApi: extendApi(store),
     state: {

@@ -13,6 +13,7 @@
   "homepage": "https://piral.io",
   "license": "MIT",
   "main": "src/index.html",
+  "typings": "src/exports.ts",
   "files": [],
   "repository": {
     "type": "git",
@@ -48,6 +49,39 @@
     "test": "echo \"Error: run tests from root\" && exit 1",
     "build": "tsc && piral build --fresh src/index.html",
     "feed": "sample-pilet-service",
-    "start": "piral debug --port 3000 src/index.html"
+    "start": "piral debug --port 3000 src/index.html",
+    "pilet:new": "pilet new ./dist/develop/sample-piral-core-jambit-0.11.5.tgz --target"
+  },
+  "pilets": {
+    "devDependencies": {
+      "@types/react": true,
+      "@types/react-dom": true,
+      "@types/react-router": true,
+      "@types/react-router-dom": true,
+      "@types/react-redux": true,
+      "redux-dynamic-modules": true,
+      "sass": true,
+      "typescript": true
+    },
+    "externals": [
+      "tsrux",
+      "react-redux",
+      "redux",
+      "redux-dynamic-modules"
+    ],
+    "files": [
+      ".gitignore",
+      "tsconfig.json"
+    ],
+    "postScaffold": "npx sort-package-json",
+    "postUpgrade": "npx sort-package-json",
+    "scripts": {
+      "build": "tsc && pilet build --fresh",
+      "pack": "pilet pack",
+      "pack:fresh": "rimraf *.tgz && pilet pack",
+      "publish-pilet": "pilet publish --api-key ad647bdc23b7437b8fa8f27c3e2d3f70fbb493c53e9160e07d37a98df333b188 --url http://localhost:9000/api/v1/pilet",
+      "publish-pilet:fresh": "npm run build && npm run pack:fresh && npm run publish-pilet",
+      "start": "pilet debug --port 3000"
+    }
   }
 }
