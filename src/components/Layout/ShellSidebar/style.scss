@@ -1,0 +1,10 @@
+.shell--sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 300px;
+    flex-shrink: 0;
+    padding: 0.7em;
+    font-size: 1em;
+    text-align: left;
+    border-right: 2px solid #ef7d00;
+}
