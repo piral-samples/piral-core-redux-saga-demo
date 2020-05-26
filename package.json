@@ -35,16 +35,18 @@
   "devDependencies": {
     "@types/react": "^16.8.2",
     "@types/react-dom": "^16.8.0",
+    "@types/react-redux": "^7.1.7",
     "@types/react-router": "^5.0.0",
     "@types/react-router-dom": "latest",
     "piral-cli": "^0.11.5",
     "piral-cli-parcel": "^0.11.5",
-    "sass": "^1.17.0",
-    "@types/react-redux": "^7.1.7"
+    "sample-pilet-service": "^1.2.3",
+    "sass": "^1.17.0"
   },
   "scripts": {
     "test": "echo \"Error: run tests from root\" && exit 1",
     "build": "tsc && piral build --fresh src/index.html",
+    "feed": "sample-pilet-service",
     "start": "piral debug --port 3000 src/index.html"
   }
 }

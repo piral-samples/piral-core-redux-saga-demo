@@ -1,7 +1,3 @@
 import React from 'react';
 
-export const Dashboard = () => (
-    <div>
-        <a href="#">Dashboard</a>
-    </div>
-);
+export const Dashboard = () => <div>This is the landing page!</div>;
