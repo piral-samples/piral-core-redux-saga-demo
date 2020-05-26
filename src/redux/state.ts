@@ -1,7 +1,7 @@
-import { FooState } from './foo/reducer';
+import { MenusState } from './menus/reducer';
 
 export interface ShellState {
     shell: {
-        foo: FooState;
+        menus: MenusState;
     };
 }

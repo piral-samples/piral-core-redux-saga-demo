@@ -1,2 +1,2 @@
-export * from './foo';
+export * from './menus';
 export * from './state';
