@@ -3,6 +3,7 @@ import React from 'react';
 import './style.scss';
 import { useSelector } from 'react-redux';
 import { selectFooterMenuEntries } from '../../../redux';
+import { MenuLink } from '../../MenuLink';
 
 export const ShellFooter = () => {
     const entries = useSelector(selectFooterMenuEntries);
@@ -10,14 +11,7 @@ export const ShellFooter = () => {
     return (
         <div className="shell--footer">
             {entries.map((entry) => (
-                <a
-                    href={entry.href}
-                    key={entry.name}
-                    rel="noopener noreferrer"
-                    target={entry.target}
-                >
-                    {entry.label}
-                </a>
+                <MenuLink entry={entry} key={entry.name} />
             ))}
         </div>
     );

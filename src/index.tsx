@@ -7,6 +7,7 @@ import { Layout } from './components/Layout';
 import { Dashboard } from './components/pages/Dashboard';
 import configureStore from './redux/configureStore';
 import { extendApi } from './extendApi';
+import { Profile } from './components/pages/Profile';
 
 async function requestPilets() {
     try {
@@ -44,7 +45,20 @@ function setupShell(app: PiletApi) {
         label: 'Home',
         href: '/',
     });
+    app.registerMenu({
+        type: 'mainmenu',
+        name: 'profile',
+        label: 'Profile',
+        href: '/profile',
+    });
+    app.registerMenu({
+        type: 'mainmenu',
+        name: 'google',
+        label: 'Google',
+        href: 'https://www.google.de',
+    });
     app.registerPage('/', Dashboard);
+    app.registerPage('/profile', Profile);
 }
 
 const store = configureStore();
