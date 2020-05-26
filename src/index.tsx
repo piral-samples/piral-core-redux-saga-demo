@@ -44,6 +44,7 @@ function setupShell(app: PiletApi) {
         label: 'Home',
         href: '/',
     });
+    app.registerPage('/', Dashboard);
 }
 
 const store = configureStore();
@@ -51,16 +52,18 @@ const store = configureStore();
 const instance = createInstance({
     requestPilets,
     extendApi: extendApi(store),
+    state: {
+        components: {
+            Layout,
+        },
+    },
 });
 
 setupShell(instance.root);
 
 const app = (
     <Provider store={store}>
-        <Piral instance={instance}>
-            <SetComponent name="Layout" component={Layout} />
-            <SetRoute path="/" component={Dashboard} />
-        </Piral>
+        <Piral instance={instance} />
     </Provider>
 );
 render(app, document.querySelector('#app'));
