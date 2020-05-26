@@ -1,0 +1,16 @@
+.shell--layout {
+    width: 100%;
+    min-height: 100%;
+    background: #fff;
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+
+    > .shell--layout-content {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        padding: 2em;
+    }
+}
