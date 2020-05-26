@@ -1,16 +1,19 @@
 import { IModuleStore } from 'redux-dynamic-modules';
 import { PiletApi, PiletMetadata } from 'piral-core';
 import { ShellState } from './redux';
-import { MenuEntry, addMenuEntry } from './redux/menus';
+import { MenuEntry, addMenuEntry, MenuType, removeMenuEntry } from './redux/menus';
 
 const createMyShellApi = (store: IModuleStore<ShellState>, target: PiletMetadata) => ({
     registerMenu(entry: MenuEntry) {
         store.dispatch(
             addMenuEntry({
                 ...entry,
-                name: `${target.name}/${entry.type}/${entry.name}`,
+                name: `${target.name}/${entry.name}`,
             }),
         );
+    },
+    unregisterMenu(type: MenuType, name: string) {
+        store.dispatch(removeMenuEntry(type, `${target.name}/${name}`));
     },
 });
 

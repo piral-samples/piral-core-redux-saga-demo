@@ -1,12 +1,12 @@
 import React from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { addMenuEntry } from '../../../redux';
+import { useDispatch } from 'react-redux';
+import { addMenuEntry, MenuType } from '../../../redux';
 
 let nextIndex = 0;
 
 export const Dashboard = () => {
     const dispatch = useDispatch();
-    const createMenuEntry = (type: 'footer' | 'mainmenu') => {
+    const createMenuEntry = (type: MenuType) => {
         const index = nextIndex++;
         dispatch(
             addMenuEntry({

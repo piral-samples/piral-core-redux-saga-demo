@@ -1,5 +1,7 @@
+export type MenuType = 'footer' | 'mainmenu';
+
 export interface MenuEntry {
-    type: 'footer' | 'mainmenu';
+    type: MenuType;
     name: string;
     label: string;
     href: string;
