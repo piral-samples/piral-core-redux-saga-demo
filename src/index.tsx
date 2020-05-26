@@ -1,11 +1,12 @@
 import * as React from 'react';
 import { render } from 'react-dom';
 import { Provider } from 'react-redux';
-import { createInstance, Piral, SetComponent, SetRoute } from 'piral-core';
+import { createInstance, Piral, SetComponent, SetRoute, PiletApi } from 'piral-core';
 
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/pages/Dashboard';
 import configureStore from './redux/configureStore';
+import { extendApi } from './extendApi';
 
 async function requestPilets() {
     try {
@@ -29,11 +30,30 @@ async function requestPilets() {
     return [];
 }
 
-const instance = createInstance({
-    requestPilets,
-});
+function setupShell(app: PiletApi) {
+    app.registerMenu({
+        type: 'footer',
+        name: 'legal',
+        label: 'Legal',
+        href: '#legal',
+        target: '_blank',
+    });
+    app.registerMenu({
+        type: 'mainmenu',
+        name: 'home',
+        label: 'Home',
+        href: '/',
+    });
+}
 
 const store = configureStore();
+
+const instance = createInstance({
+    requestPilets,
+    extendApi: extendApi(store),
+});
+
+setupShell(instance.root);
 
 const app = (
     <Provider store={store}>
