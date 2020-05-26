@@ -1,0 +1,50 @@
+.shell--notifications {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 2em;
+    right: 2em;
+    width: 300px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.shell--notification {
+    display: flex;
+    flex-direction: row;
+    padding: 0.5em;
+    color: white;
+
+    &:not(:first-child) {
+        margin-top: 0.2em;
+    }
+
+    :first-child {
+        flex-grow: 1;
+    }
+    :last-child {
+        flex-shrink: 0;
+    }
+}
+
+.shell--notification-title {
+    font-size: 1em;
+    font-weight: bold;
+}
+
+.shell--notification-body {
+    font-size: 0.8em;
+}
+
+.shell--notification-error {
+    background: #ff5050;
+}
+
+.shell--notification-warn {
+    background: #f2cc00;
+}
+
+.shell--notification-info {
+    background: #50a2ff;
+}

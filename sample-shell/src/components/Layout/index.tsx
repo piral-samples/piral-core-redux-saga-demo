@@ -4,6 +4,7 @@ import './style.scss';
 import { ShellHeader } from './ShellHeader';
 import { ShellFooter } from './ShellFooter';
 import { ShellSidebar } from './ShellSidebar';
+import { ShellNotifications } from './ShellNotifications';
 
 export const Layout: React.FC = ({ children }) => (
     <div className="shell--layout">
@@ -13,5 +14,6 @@ export const Layout: React.FC = ({ children }) => (
             <div className="shell--layout-content">{children}</div>
         </div>
         <ShellFooter />
+        <ShellNotifications />
     </div>
 );
