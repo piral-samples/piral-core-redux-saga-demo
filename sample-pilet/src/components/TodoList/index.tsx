@@ -14,7 +14,7 @@ export const TodoList = () => {
             <ul>
                 {todos.map((todo) => (                    
                     <div className="sample-pilet--todo-entry">
-                        <input type="checkbox" onClick={() => dispatch(toggleDone(todo))}></input>
+                        <input type="checkbox" checked={todo.done} onClick={() => dispatch(toggleDone(todo))}></input>
                         {todo.done
                             ? <span className='sample-pilet--todo-entry-text-done'>{todo.text}</span>
                             : <span className='sample-pilet--todo-entry-text'>{todo.text}</span>
