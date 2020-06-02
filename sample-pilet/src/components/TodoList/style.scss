@@ -6,8 +6,34 @@
     padding: 0.7em;
     font-size: 1em;
     text-align: left;
+}
 
-    .sample-pilet--todo-entry > button {
+.sample-pilet--todo-entry {
+    padding: 0.3em;
+
+    > button {
         margin-left: 1em;
+        background-color: white;
     }
+}
+
+.sample-pilet--remove-todo-button {
+    background-color: white;
+    color: black;
+    margin-left: 0.1em;
+    font-weight: bold;
+
+    &:hover {
+        background-color: black;
+        color: white;
+    }
+}
+
+.sample-pilet--todo-entry-text {
+    color: black;
+}
+
+.sample-pilet--todo-entry-text-done {
+    color:grey;
+    text-decoration: line-through;
 }

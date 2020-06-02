@@ -1,0 +1,10 @@
+.sample-pilet--add-todo-button {
+    background-color: #ef7d00;
+    color:white;
+    margin-left: .5em;
+    font-weight: bold;
+
+    &:hover {
+        background-color: darken($color: rgb(255, 122, 0), $amount: 10%);
+    }
+}
