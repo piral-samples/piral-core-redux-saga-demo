@@ -14,18 +14,8 @@
     > button {
         margin-left: 1em;
         background-color: white;
-    }
-}
-
-.sample-pilet--remove-todo-button {
-    background-color: white;
-    color: black;
-    margin-left: 0.1em;
-    font-weight: bold;
-
-    &:hover {
-        background-color: black;
-        color: white;
+        color: red;
+        border: none;
     }
 }
 
