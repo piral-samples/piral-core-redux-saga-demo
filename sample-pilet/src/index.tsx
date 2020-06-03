@@ -2,7 +2,7 @@ import { PiletApi, addNotification } from 'sample-piral-core-jambit';
 import { useDispatch } from 'react-redux';
 import React, { useEffect } from 'react';
 
-import { DynamicTodoPage } from './components/DynamicTodoPage';
+import TodoPage from './components/TodoPage';
 
 const ShowNotification = () => {
     const dispatch = useDispatch();
@@ -31,6 +31,6 @@ export function setup(app: PiletApi) {
         label: 'Pilet Notification',
         href: '/pilet-notification',
     });
-    app.registerPage('/todo', DynamicTodoPage);
+    app.registerPage('/todo', TodoPage);
     app.registerPage('/pilet-notification', ShowNotification);
 }

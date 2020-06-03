@@ -1,7 +1,7 @@
 import React from 'react';
 import { selectTodos } from '../../redux/todos/selectors';
 import { useSelector, useDispatch } from 'react-redux';
-import { removeTodoEntry, toggleDone } from '../../redux/todos/actions';
+import { removeTodo, toggleDone } from '../../redux/todos/actions';
 import './style.scss';
 
 export const TodoList = () => {
@@ -19,7 +19,7 @@ export const TodoList = () => {
                             ? <span className='sample-pilet--todo-entry-text-done'>{todo.text}</span>
                             : <span className='sample-pilet--todo-entry-text'>{todo.text}</span>
                         }
-                        <button onClick={() => dispatch(removeTodoEntry(todo))} type="button">
+                        <button onClick={() => dispatch(removeTodo(todo))} type="button">
                         x
                         </button>
                     </div> 

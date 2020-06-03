@@ -1,16 +1,6 @@
 import { actionCreator } from 'tsrux';
 import { Todo } from './types';
 
-export const addTodoStart = actionCreator('SAMPLE/ADD_TODO_START', (text: string) => ({ text }));
-export const addTodoSuccess = actionCreator('SAMPLE/ADD_TODO_SUCCESS', (text: string) => ({
-    text,
-    done: false,
-}));
-export const addTodoFailure = actionCreator('SAMPLE/ADD_TODO_FAILURE');
-
+export const addTodo = actionCreator('SAMPLE/ADD_TODO', (text: string) => ({ text }));
 export const toggleDone = actionCreator('SAMPLE/TOGGLE_DONE', (todo: Todo) => todo);
-
-
-export const createTodoEntry = actionCreator('SAMPLE/TODO/REMOVE', (todo: Todo) => todo);
-
-export const removeTodoEntry = actionCreator('SAMPLE/TODO/REMOVE', (todo: Todo) => todo);
+export const removeTodo = actionCreator('SAMPLE/REMOVE_TODO', (todo: Todo) => todo);

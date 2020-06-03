@@ -1,6 +1,6 @@
 import React, { useState, KeyboardEvent } from 'react';
 import { useDispatch } from 'react-redux';
-import { addTodoSuccess } from '../../redux/todos/actions';
+import { addTodo } from '../../redux/todos/actions';
 import { Key } from 'ts-keycode-enum';
 import './style.scss';
 
@@ -11,7 +11,7 @@ export const AddTodoForm = () => {
 
     const submitTodo = () => {
         if (todoText != '') {
-            dispatch(addTodoSuccess(todoText));
+            dispatch(addTodo(todoText));
             setTodoText('');
         }
         else {
