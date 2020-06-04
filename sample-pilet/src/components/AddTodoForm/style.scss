@@ -1,10 +1,31 @@
+.sample-pilet--add-todo-form {
+    display: flex;
+    flex-direction: row;
+}
+
 .sample-pilet--add-todo-button {
     background-color: #ef7d00;
     color:white;
     margin-left: .5em;
     font-weight: bold;
+    border:1px solid black;
+    border-radius: 0;
+    display: inline-block;
 
     &:hover {
         background-color: darken($color: rgb(255, 122, 0), $amount: 10%);
+    }
+    &:focus {
+        outline: none;
+    }
+}
+
+.sample-pilet--add-todo-input {
+    border:1px solid black;
+    border-radius: 0;
+    display: inline-block;
+
+    &:focus {
+        outline: none;
     }
 }

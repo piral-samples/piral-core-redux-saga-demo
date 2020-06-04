@@ -1,6 +1,6 @@
 import { mapReducers } from 'tsrux';
 
-import { addTodo, toggleDone, removeTodo } from './actions';
+import { addTodo, toggleTodo, removeTodo } from './actions';
 import { Todo } from './types';
 
 const initialState = {
@@ -18,10 +18,10 @@ const todosReducer = mapReducers(initialState, (handle) => [
         nextId: state.nextId + 1,
         list: [...state.list, { ...action.payload, id: state.nextId, done: false }],
     })),
-    handle(toggleDone, (state, action) => ({
+    handle(toggleTodo, (state, action) => ({
         ...state,
         list: state.list.map((todo) =>
-            todo.id === action.payload.id ? { ...todo, done: !action.payload.done } : todo,
+            todo.id === action.payload.id ? { ...todo, done: !todo.done } : todo,
         ),
     })),
     handle(removeTodo, (state, action) => ({

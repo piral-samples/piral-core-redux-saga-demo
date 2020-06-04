@@ -1,7 +1,7 @@
 import React from 'react';
 import { selectTodos } from '../../redux/todos/selectors';
 import { useSelector, useDispatch } from 'react-redux';
-import { removeTodo, toggleDone } from '../../redux/todos/actions';
+import { removeTodo, toggleTodo } from '../../redux/todos/actions';
 import './style.scss';
 
 export const TodoList = () => {
@@ -9,18 +9,16 @@ export const TodoList = () => {
     const dispatch = useDispatch();
 
     return (
-        <div className="sample-pilet-todo-list">
-            <ul>
-                {todos.map((todo) => (                    
-                    <div className={`sample-pilet--todo-entry sample-pilet--todo-entry-${todo.done ? 'done' : 'not-done'}`}>
-                        <input type="checkbox" checked={todo.done} onClick={() => dispatch(toggleDone(todo))}></input>
-                        {todo.text}
-                        <button onClick={() => dispatch(removeTodo(todo))} type="button">
-                        x
-                        </button>
-                    </div> 
-                ))}
-            </ul>
-        </div>
+        <ul className="sample-pilet-todo-list">
+            {todos.map((todo) => (
+                <li className={`sample-pilet--todo-list-entry sample-pilet--todo-list-entry-${todo.done ? 'done' : 'not-done'}`}>
+                    <input className="sample-pilet-todo-list-checkbox" type="checkbox" checked={todo.done} onClick={() => dispatch(toggleTodo(todo.id))}></input>
+                    <span className="sample-pilet-todo-list-text">{todo.text}</span>
+                    <button className="sample-pilet-todo-list-remove-button" onClick={() => dispatch(removeTodo(todo.id))} type="button">
+                    x
+                    </button>
+                </li>
+            ))}
+        </ul>
     );
 }

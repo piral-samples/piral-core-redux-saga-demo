@@ -1,29 +1,55 @@
 .sample-pilet-todo-list {
     display: flex;
     flex-direction: column;
-    width: 300px;
     flex-shrink: 0;
     padding: 0.7em;
     font-size: 1em;
-    text-align: left;
+    padding: 0;
+    list-style-type: none;
+    width: max-content;
 }
 
-.sample-pilet--todo-entry {
-    padding: 0.3em;
-
+.sample-pilet--todo-list-entry {
+    padding: 0;
+    display:flex;
+    
     > button {
-        margin-left: 1em;
+        margin: 0px 0px 0px 20px;
+        padding: 0;
         background-color: white;
         color: red;
         border: none;
+        float: right;
+
+        text-decoration: none;
+
+        &:hover {
+            color: black;
+        }
+        &:focus {
+            outline: none;
+        }
     }
 }
 
-.sample-pilet--todo-entry-not-done {
+.sample-pilet--todo-list-entry-not-done {
     color: black;
 }
 
-.sample-pilet--todo-entry-done {
+.sample-pilet--todo-list-entry-done {
     color:grey;
-    text-decoration: line-through;
+
+    > span {
+        text-decoration: line-through;
+    }
 }
+.sample-pilet-todo-list-text {
+    flex-grow: 1;
+    align-self: center;
+}
+
+.sample-pilet-todo-list-checkbox {
+    margin-left: 0;
+    margin-right: 10px;
+}
+
