@@ -1,35 +1,30 @@
+// Polyfills
+import 'core-js/es/map';
+import 'core-js/es/set';
+import 'core-js/es/promise';
+import 'react-app-polyfill/ie11';
+import 'react-app-polyfill/stable';
+import 'current-script-polyfill';
+
 import * as React from 'react';
 import { render } from 'react-dom';
-import { Provider } from 'react-redux';
-import { createInstance, Piral, PiletApi, extendSharedDependencies } from 'piral-core';
+import { Provider, useSelector } from 'react-redux';
+import {
+    createInstance,
+    Piral,
+    PiletApi,
+    extendSharedDependencies,
+    PiletMetadata,
+} from 'piral-core';
 
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/pages/Dashboard';
 import configureStore from './redux/configureStore';
 import { extendApi } from './extendApi';
 import { Profile } from './components/pages/Profile';
-
-async function requestPilets() {
-    try {
-        const piletFeedUrl = 'http://localhost:9000/api/v1/pilet';
-        const requestParams: RequestInit & { headers: Headers } = {
-            method: 'GET',
-            headers: new Headers({ Accept: 'application/json' }),
-        };
-        requestParams.cache = 'no-cache';
-        const response = await fetch(piletFeedUrl, requestParams);
-
-        if (response.ok) {
-            const responseBody = await response.json();
-            return responseBody.items;
-        } else {
-            console.error('Could not load pilets from feed');
-        }
-    } catch (e) {
-        console.error('Could not load pilets from feed');
-    }
-    return [];
-}
+import { selectPiletsFetched, selectPilets } from './redux/pilets';
+import LoadingIndicator from './components/LoadingIndicator';
+import ErrorInfo from './components/ErrorInfo';
 
 function setupShell(app: PiletApi) {
     app.registerMenu({
@@ -61,29 +56,62 @@ function setupShell(app: PiletApi) {
     app.registerPage('/profile', Profile);
 }
 
+// Here we export our own module explicitly, since it's not possible to do this via the "externals" property in the package.json
+// If this wasn't here, we could only export types to pilets, not functions, classes, etc. due to circular dependency issues.
 const getDependencies = extendSharedDependencies({
     // eslint-disable-next-line global-require
     'sample-piral-core-jambit': require('./exports'),
 });
 
-const store = configureStore();
+function init() {
+    const store = configureStore();
 
-const instance = createInstance({
-    getDependencies,
-    requestPilets,
-    extendApi: extendApi(store),
-    state: {
-        components: {
-            Layout,
-        },
-    },
-});
+    function createApp(pilets: PiletMetadata[]) {
+        try {
+            const instance = createInstance({
+                getDependencies,
+                requestPilets: async () => pilets,
+                extendApi: extendApi(store),
+                state: {
+                    components: {
+                        LoadingIndicator,
+                        ErrorInfo,
+                        Layout,
+                    },
+                },
+            });
+            setupShell(instance.root);
 
-setupShell(instance.root);
+            return <Piral instance={instance} />;
+        } catch (error) {
+            return <ErrorInfo type="loading" error={error} />;
+        }
+    }
 
-const app = (
-    <Provider store={store}>
-        <Piral instance={instance} />
-    </Provider>
-);
-render(app, document.querySelector('#app'));
+    function App() {
+        const fetched = useSelector(selectPiletsFetched);
+        const pilets = useSelector(selectPilets);
+        const [app, setApp] = React.useState<JSX.Element | null>(null);
+        React.useEffect(() => {
+            if (fetched && pilets && !app) {
+                setApp(createApp(pilets));
+            }
+        }, [fetched, pilets, app]);
+        return app || <LoadingIndicator />;
+    }
+
+    render(
+        <Provider store={store}>
+            <App />
+        </Provider>,
+        document.querySelector('#app'),
+    );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+if (process.env.DEBUG_PILET && (window as any).exportPortalDependencies) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).portalDependencies = getDependencies();
+} else {
+    init();
+}

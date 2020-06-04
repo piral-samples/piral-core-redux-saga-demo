@@ -1,18 +1,22 @@
-import { IModule } from 'redux-dynamic-modules';
+import { ISagaModule } from 'redux-dynamic-modules-saga';
 import { combineReducers } from 'redux';
 
 import { ShellState } from './state';
 import menusReducer from './menus/reducer';
 import notificationsReducer from './notifications/reducer';
+import piletsReducer from './pilets/reducer';
+import piletsRootSaga from './pilets/saga';
 
-export default function shellModule(): IModule<ShellState> {
+export default function shellModule(): ISagaModule<ShellState> {
     return {
         id: 'shell',
         reducerMap: {
             shell: combineReducers({
+                pilets: piletsReducer,
                 menus: menusReducer,
                 notifications: notificationsReducer,
             }),
         },
+        sagas: [piletsRootSaga],
     };
 }

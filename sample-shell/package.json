@@ -24,15 +24,21 @@
   },
   "app": "src/index.html",
   "dependencies": {
+    "core-js": "^3.6.5",
+    "current-script-polyfill": "^1.0.0",
     "piral-core": "^0.11.5",
     "react": "^16.8.1",
+    "react-app-polyfill": "^1.0.6",
     "react-dom": "^16.8.1",
     "react-redux": "7.2.0",
     "react-router": ">=5.0.0",
     "react-router-dom": ">=5.0.0",
     "redux": "4.0.5",
     "redux-dynamic-modules": "5.2.3",
-    "tsrux": "^1.1.2"
+    "redux-dynamic-modules-saga": "^5.2.3",
+    "redux-saga": "^1.1.3",
+    "tsrux": "^1.1.2",
+    "typed-redux-saga": "^1.0.7"
   },
   "devDependencies": {
     "@types/react": "^16.8.2",
@@ -59,15 +65,18 @@
       "@types/react-router": true,
       "@types/react-router-dom": true,
       "@types/react-redux": true,
-      "redux-dynamic-modules": true,
+      "redux-dynamic-modules-saga": true,
       "sass": true,
+      "rimraf": true,
       "typescript": true
     },
     "externals": [
       "tsrux",
       "react-redux",
       "redux",
-      "redux-dynamic-modules"
+      "redux-dynamic-modules",
+      "redux-saga",
+      "redux-saga/effects"
     ],
     "files": [
       ".gitignore",
