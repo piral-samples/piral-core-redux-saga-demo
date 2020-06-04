@@ -12,8 +12,10 @@ export const TodoList = () => {
         <ul className="sample-pilet-todo-list">
             {todos.map((todo) => (
                 <li className={`sample-pilet--todo-list-entry sample-pilet--todo-list-entry-${todo.done ? 'done' : 'not-done'}`}>
-                    <input className="sample-pilet-todo-list-checkbox" type="checkbox" checked={todo.done} onClick={() => dispatch(toggleTodo(todo.id))}></input>
-                    <span className="sample-pilet-todo-list-text">{todo.text}</span>
+                    <label className="test">
+                        <input className="sample-pilet-todo-list-checkbox" type="checkbox" checked={todo.done} onClick={() => dispatch(toggleTodo(todo.id))}></input>
+                        <span className="sample-pilet-todo-list-text">{todo.text}</span>
+                    </label>
                     <button className="sample-pilet-todo-list-remove-button" onClick={() => dispatch(removeTodo(todo.id))} type="button">
                     x
                     </button>

@@ -19,7 +19,6 @@
         background-color: white;
         color: red;
         border: none;
-        float: right;
 
         text-decoration: none;
 
@@ -39,7 +38,7 @@
 .sample-pilet--todo-list-entry-done {
     color:grey;
 
-    > span {
+    > label > span {
         text-decoration: line-through;
     }
 }
@@ -53,3 +52,9 @@
     margin-right: 10px;
 }
 
+
+
+.test {
+    margin: 0;
+    flex-grow: 1;
+}
