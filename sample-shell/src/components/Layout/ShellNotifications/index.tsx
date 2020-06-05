@@ -17,9 +17,8 @@ const ShellNotificationEntry = ({ entry }: ShellNotificationEntryProps) => {
 
     useEffect(() => {
         let timer = setTimeout(() => {
-            console.log('test');
+            dispatch(removeNotification(entry.id));
         }, 4000);
-        dispatch(removeNotification(entry.id));
 
         return () => {
             clearTimeout(timer);
