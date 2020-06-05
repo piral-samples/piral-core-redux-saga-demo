@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 
 import {
@@ -14,6 +14,13 @@ interface ShellNotificationEntryProps {
 
 const ShellNotificationEntry = ({ entry }: ShellNotificationEntryProps) => {
     const dispatch = useDispatch();
+
+    useEffect(() => {
+        setTimeout(() => {
+            dispatch(removeNotification(entry.id));
+        }, 4000);
+    }, []);
+
     return (
         <li className={`shell--notification shell--notification-${entry.type}`}>
             <div>
