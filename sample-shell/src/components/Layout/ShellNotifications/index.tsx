@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 
 import {
@@ -16,11 +16,16 @@ const ShellNotificationEntry = ({ entry }: ShellNotificationEntryProps) => {
     const dispatch = useDispatch();
 
     useEffect(() => {
-        setTimeout(() => {
-            dispatch(removeNotification(entry.id));
+        let timer = setTimeout(() => {
+            console.log('test');
         }, 4000);
-    }, []);
+        dispatch(removeNotification(entry.id));
 
+        return () => {
+            clearTimeout(timer);
+        }
+    }, []);
+    
     return (
         <li className={`shell--notification shell--notification-${entry.type}`}>
             <div>

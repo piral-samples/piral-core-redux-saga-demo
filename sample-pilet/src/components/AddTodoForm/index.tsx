@@ -27,7 +27,7 @@ export const AddTodoForm = () => {
                 addNotification({
                     type: 'error',
                     title: 'Todo List',
-                    text: 'Todo was not created! :(',
+                    text: 'Text is empty! Todo was not created! :(',
                 }),
             );
         }
