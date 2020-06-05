@@ -11,13 +11,8 @@ export const AddTodoForm = () => {
     const [todoText, setTodoText] = useState('');
 
     const submitTodo = () => {
-        if (todoText != 'a') {
-            //dispatch(addTodo(todoText));
-
-            dispatch(addTodo('aaaa'));
-            dispatch(addTodo('a'));
-            dispatch(addTodo('aaaa'));
-
+        if (todoText != '') {
+            dispatch(addTodo(todoText));
             setTodoText('');
             dispatch(
                 addNotification({
@@ -30,7 +25,7 @@ export const AddTodoForm = () => {
         else {
             dispatch(
                 addNotification({
-                    type: 'info',
+                    type: 'error',
                     title: 'Todo List',
                     text: 'Todo was not created! :(',
                 }),
