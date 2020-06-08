@@ -61,7 +61,7 @@ function setupShell(app: PiletApi) {
 // If this wasn't here, we could only export types to pilets, not functions, classes, etc. due to circular dependency issues.
 const getDependencies = extendSharedDependencies({
     // eslint-disable-next-line global-require
-    'sample-piral-core-jambit': require('./exports'),
+    'piral-core-redux-saga-demo-shell': require('./exports'),
 });
 
 function init() {

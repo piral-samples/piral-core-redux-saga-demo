@@ -2,7 +2,7 @@ import React, { useState, KeyboardEvent } from 'react';
 import { useDispatch } from 'react-redux';
 import { addTodo } from '../../redux/todos/actions';
 import { Key } from 'ts-keycode-enum';
-import { addNotification, Button, Input } from 'sample-piral-core-jambit';
+import { addNotification, Button, Input } from 'piral-core-redux-saga-demo-shell';
 import './style.scss';
 
 export const AddTodoForm = () => {

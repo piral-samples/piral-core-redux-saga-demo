@@ -1,4 +1,4 @@
-import { PiletApi } from 'sample-piral-core-jambit';
+import { PiletApi } from 'piral-core-redux-saga-demo-shell';
 
 import { DynamicTodoPage } from './components/TodoPage';
 

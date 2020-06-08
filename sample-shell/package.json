@@ -55,8 +55,7 @@
     "test": "echo \"Error: run tests from root\" && exit 1",
     "build": "tsc && piral build --fresh src/index.html",
     "feed": "sample-pilet-service",
-    "start": "piral debug --port 3000 src/index.html",
-    "pilet:new": "pilet new ./dist/develop/sample-piral-core-jambit-0.11.5.tgz --target"
+    "start": "piral debug --port 3000 src/index.html"
   },
   "pilets": {
     "devDependencies": {
