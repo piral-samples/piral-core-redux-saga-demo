@@ -2,7 +2,7 @@
   "name": "piral-core-redux-saga-demo-shell",
   "private": true,
   "version": "0.11.5",
-  "description": "Example project illustrating the use of the piral-core and piral-cli packages.",
+  "description": "Example project illustrating the use of the piral-core and piral-cli packages in combination with redux and sagas.",
   "keywords": [
     "portal",
     "smapiot",
@@ -17,10 +17,10 @@
   "files": [],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/smapiot/piral.git"
+    "url": "git+https://github.com/piral-samples/piral-core-redux-saga-demo.git"
   },
   "bugs": {
-    "url": "https://github.com/smapiot/piral/issues"
+    "url": "https://github.com/piral-samples/piral-core-redux-saga-demo/issues"
   },
   "app": "src/index.html",
   "dependencies": {
