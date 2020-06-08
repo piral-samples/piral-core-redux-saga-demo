@@ -21,7 +21,7 @@ const TodoListEntry = ({ todo }: TodoListEntryProps) => {
                 <input
                     className="sample-pilet--todo-list-checkbox"
                     type="checkbox"
-                    checked={todo.done}
+                    defaultChecked={todo.done}
                     onClick={() => dispatch(toggleTodo(todo.id))}
                 ></input>
                 <span className="sample-pilet--todo-list-text">{todo.text}</span>

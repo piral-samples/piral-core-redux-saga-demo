@@ -13,8 +13,8 @@ export const ShellSidebar = () => {
             <h2>Navigation</h2>
             <ul>
                 {entries.map((entry) => (
-                    <li className="shell--sidebar-menu-entry">
-                        <MenuLink entry={entry} key={entry.name} />
+                    <li className="shell--sidebar-menu-entry" key={entry.name}>
+                        <MenuLink entry={entry} />
                     </li>
                 ))}
             </ul>
