@@ -1,9 +1,9 @@
-import { put, all, call, takeLatest, select } from 'typed-redux-saga';
+import { put, all, call } from 'typed-redux-saga';
 
 import { fetchPilets } from './actions';
 import { addNotification } from '../notifications';
 
-export default function* piletsRootSaga() {
+export function* piletsRootSaga() {
     yield* all([fetchPiletsSaga()]);
 }
 

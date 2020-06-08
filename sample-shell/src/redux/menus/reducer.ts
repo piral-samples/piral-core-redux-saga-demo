@@ -11,7 +11,7 @@ const initialState = {
 
 export type MenusState = typeof initialState;
 
-const menusReducer = mapReducers(initialState, (handle) => [
+export const menusReducer = mapReducers(initialState, (handle) => [
     handle(addMenuEntry, (state, action) => ({
         ...state,
         [action.payload.type]: [...state[action.payload.type], action.payload],
@@ -28,5 +28,3 @@ const menusReducer = mapReducers(initialState, (handle) => [
         mainmenu: state.mainmenu.filter((entry) => entry.pilet !== action.payload.name),
     })),
 ]);
-
-export default menusReducer;

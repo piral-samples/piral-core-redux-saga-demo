@@ -1,5 +1,5 @@
 {
-  "name": "sample-piral-core-jambit",
+  "name": "piral-core-redux-saga-demo-shell",
   "private": true,
   "version": "0.11.5",
   "description": "Example project illustrating the use of the piral-core and piral-cli packages.",
@@ -26,13 +26,13 @@
   "dependencies": {
     "core-js": "^3.6.5",
     "current-script-polyfill": "^1.0.0",
-    "piral-core": "^0.11.5",
-    "react": "^16.8.1",
+    "piral-core": "^0.11.6",
+    "react": "^16.13.1",
     "react-app-polyfill": "^1.0.6",
-    "react-dom": "^16.8.1",
+    "react-dom": "^16.13.1",
     "react-redux": "7.2.0",
-    "react-router": ">=5.0.0",
-    "react-router-dom": ">=5.0.0",
+    "react-router": ">=5.2.0",
+    "react-router-dom": ">=5.2.0",
     "redux": "4.0.5",
     "redux-dynamic-modules": "5.2.3",
     "redux-dynamic-modules-saga": "^5.2.3",
@@ -41,15 +41,15 @@
     "typed-redux-saga": "^1.0.7"
   },
   "devDependencies": {
-    "@types/react": "^16.8.2",
-    "@types/react-dom": "^16.8.0",
-    "@types/react-redux": "^7.1.7",
-    "@types/react-router": "^5.0.0",
+    "@types/react": "^16.9.35",
+    "@types/react-dom": "^16.9.8",
+    "@types/react-redux": "^7.1.9",
+    "@types/react-router": "^5.1.7",
     "@types/react-router-dom": "latest",
-    "piral-cli": "^0.11.5",
-    "piral-cli-parcel": "^0.11.5",
-    "sample-pilet-service": "^1.2.3",
-    "sass": "^1.17.0"
+    "piral-cli": "^0.11.6",
+    "piral-cli-parcel": "^0.11.6",
+    "sample-pilet-service": "^1.3.0",
+    "sass": "^1.26.8"
   },
   "scripts": {
     "test": "echo \"Error: run tests from root\" && exit 1",

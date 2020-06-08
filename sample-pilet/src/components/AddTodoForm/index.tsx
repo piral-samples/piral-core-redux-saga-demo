@@ -2,7 +2,7 @@ import React, { useState, KeyboardEvent } from 'react';
 import { useDispatch } from 'react-redux';
 import { addTodo } from '../../redux/todos/actions';
 import { Key } from 'ts-keycode-enum';
-import { addNotification } from 'sample-piral-core-jambit';
+import { addNotification, Button, Input } from 'sample-piral-core-jambit';
 import './style.scss';
 
 export const AddTodoForm = () => {
@@ -21,8 +21,7 @@ export const AddTodoForm = () => {
                     text: 'Todo successfully created! :)',
                 }),
             );
-        }
-        else {
+        } else {
             dispatch(
                 addNotification({
                     type: 'error',
@@ -33,16 +32,18 @@ export const AddTodoForm = () => {
         }
     };
     const onKeyDown = (e: KeyboardEvent) => {
-        if(e.keyCode === Key.Enter)
-            submitTodo();
+        if (e.keyCode === Key.Enter) submitTodo();
     };
 
     return (
-        <div className='sample-pilet--add-todo-form'>
-            <input className='sample-pilet--add-todo-input' onKeyDown={onKeyDown} placeholder='Add Todo' value={todoText} onChange={e => setTodoText(e.target.value)} />
-            <button className='sample-pilet--add-todo-button' onClick={submitTodo} type="button">
-                Add Todo
-            </button>
+        <div className="sample-pilet--add-todo-form">
+            <Input
+                onKeyDown={onKeyDown}
+                placeholder="Add Todo"
+                value={todoText}
+                onChange={(e) => setTodoText(e.target.value)}
+            />
+            <Button text="Add Todo" onClick={submitTodo} />
         </div>
     );
-}
+};

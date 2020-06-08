@@ -10,7 +10,7 @@ const initialState = {
 
 export type PiletsState = typeof initialState;
 
-const piletsReducer = mapReducers(initialState, (handle) => [
+export const piletsReducer = mapReducers(initialState, (handle) => [
     handle(fetchPilets.success, (state, action) => ({
         ...state,
         list: action.payload.pilets,
@@ -21,5 +21,3 @@ const piletsReducer = mapReducers(initialState, (handle) => [
         fetched: true,
     })),
 ]);
-
-export default piletsReducer;

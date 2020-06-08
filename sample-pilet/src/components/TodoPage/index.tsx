@@ -2,7 +2,7 @@ import React from 'react';
 import { AddTodoForm } from '../AddTodoForm';
 import { TodoList } from '../TodoList';
 import { DynamicModuleLoader } from 'redux-dynamic-modules';
-import samplePiletModule from '../../redux/module';
+import { samplePiletModule } from '../../redux/module';
 
 const TodoPage = () => (
     <div>
@@ -12,10 +12,8 @@ const TodoPage = () => (
     </div>
 );
 
-const DynamicTodoPage = () => (
+export const DynamicTodoPage = () => (
     <DynamicModuleLoader modules={[samplePiletModule()]}>
         <TodoPage />
     </DynamicModuleLoader>
 );
-
-export default DynamicTodoPage;

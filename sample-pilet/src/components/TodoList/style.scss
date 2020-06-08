@@ -1,4 +1,4 @@
-.sample-pilet-todo-list {
+.sample-pilet--todo-list {
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
@@ -11,11 +11,18 @@
 
 .sample-pilet--todo-list-entry {
     padding: 0;
-    display:flex;
-    
-    > button {
-        margin: 0px 0px 0px 20px;
-        padding: 0;
+    display: flex;
+
+    > .sample-pilet--todo-list-label {
+        display: flex;
+        margin: 0;
+        flex-grow: 1;
+    }
+
+    > .sample-pilet--todo-list-remove {
+        margin: 0 0 0 1em;
+        padding: 0 0.5em;
+        cursor: pointer;
         background-color: white;
         color: red;
         border: none;
@@ -36,25 +43,18 @@
 }
 
 .sample-pilet--todo-list-entry-done {
-    color:grey;
+    color: grey;
 
     > label > span {
         text-decoration: line-through;
     }
 }
-.sample-pilet-todo-list-text {
+.sample-pilet--todo-list-text {
     flex-grow: 1;
     align-self: center;
 }
 
-.sample-pilet-todo-list-checkbox {
+.sample-pilet--todo-list-checkbox {
     margin-left: 0;
     margin-right: 10px;
-}
-
-
-
-.test {
-    margin: 0;
-    flex-grow: 1;
 }

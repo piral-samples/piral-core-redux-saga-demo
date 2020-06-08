@@ -17,16 +17,3 @@ a {
         color: darken($color: rgb(255, 122, 0), $amount: 10%);
     }
 }
-
-button {
-    border: 1px solid #ef7d00;
-    background: white;
-    padding: 0.4em 0.7em;
-    margin: 0 0.7em;
-    cursor: pointer;
-
-    &:hover {
-        background: #ef7d00;
-        color: white;
-    }
-}

@@ -1,8 +1,7 @@
 import React from 'react';
 import { useDispatch } from 'react-redux';
 import { addNotification, NotificationType } from '../../../redux';
-
-let nextIndex = 0;
+import { Button } from '../../form/Button';
 
 export const Dashboard = () => {
     const dispatch = useDispatch();
@@ -18,10 +17,11 @@ export const Dashboard = () => {
 
     return (
         <div>
-            <h1>This is the landing page!</h1>
-            <button onClick={() => createNotification('info')}>Create Info Notification</button>
-            <button onClick={() => createNotification('warn')}>Create Warn Notification</button>
-            <button onClick={() => createNotification('error')}>Create Error Notification</button>
+            <h1>Landing Page</h1>
+            <h4>Create Notifications:</h4>
+            <Button text="Info" onClick={() => createNotification('info')} />
+            <Button text="Warn" onClick={() => createNotification('warn')} />
+            <Button text="Error" onClick={() => createNotification('error')} />
         </div>
     );
 };

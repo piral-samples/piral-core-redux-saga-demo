@@ -12,8 +12,8 @@ export const Layout: React.FC = ({ children }) => (
         <div className="shell--layout-horizontal">
             <ShellSidebar />
             <div className="shell--layout-content">{children}</div>
+            <ShellNotifications />
         </div>
         <ShellFooter />
-        <ShellNotifications />
     </div>
 );

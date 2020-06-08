@@ -11,7 +11,7 @@ export const errorComponents = {
 
 type ErrorComponentType = keyof typeof errorComponents;
 
-export default (props: ErrorInfoProps) => {
+export const ErrorInfo = (props: ErrorInfoProps) => {
     // log error on first render only (to avoid spamming)
     useEffect(() => {
         if (props.type !== 'not_found') {

@@ -2,3 +2,4 @@
 import './extendApi';
 
 export * from './redux/exports';
+export * from './components/exports';

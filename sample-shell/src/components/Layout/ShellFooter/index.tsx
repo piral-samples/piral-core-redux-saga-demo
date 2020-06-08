@@ -11,7 +11,7 @@ export const ShellFooter = () => {
     return (
         <div className="shell--footer">
             {entries.map((entry) => (
-                <MenuLink entry={entry} key={entry.name} />
+                <MenuLink entry={entry} key={entry.name} className="shell--footer-link" />
             ))}
         </div>
     );

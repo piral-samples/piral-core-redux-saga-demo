@@ -2,9 +2,9 @@ import { IModule } from 'redux-dynamic-modules';
 import { combineReducers } from 'redux';
 
 import { SamplePiletState } from './state';
-import todosReducer from './todos/reducer';
+import { todosReducer } from './todos/reducer';
 
-export default function samplePiletModule(): IModule<SamplePiletState> {
+export function samplePiletModule(): IModule<SamplePiletState> {
     return {
         id: 'sample-pilet',
         reducerMap: {

@@ -10,7 +10,7 @@ const initialState = {
 
 export type NotificationsState = typeof initialState;
 
-const notificationsReducer = mapReducers(initialState, (handle) => [
+export const notificationsReducer = mapReducers(initialState, (handle) => [
     handle(addNotification, (state, action) => ({
         nextId: state.nextId + 1,
         list: [...state.list, { ...action.payload, id: state.nextId }],
@@ -20,5 +20,3 @@ const notificationsReducer = mapReducers(initialState, (handle) => [
         list: state.list.filter((entry) => entry.id !== action.payload.id),
     })),
 ]);
-
-export default notificationsReducer;

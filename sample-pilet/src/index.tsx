@@ -1,6 +1,6 @@
 import { PiletApi } from 'sample-piral-core-jambit';
 
-import TodoPage from './components/TodoPage';
+import { DynamicTodoPage } from './components/TodoPage';
 
 export function setup(app: PiletApi) {
     app.registerMenu({
@@ -15,5 +15,5 @@ export function setup(app: PiletApi) {
         label: 'Todo List',
         href: '/todo',
     });
-    app.registerPage('/todo', TodoPage);
+    app.registerPage('/todo', DynamicTodoPage);
 }

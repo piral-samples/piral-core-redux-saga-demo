@@ -11,7 +11,7 @@ const initialState = {
 
 export type TodosState = typeof initialState;
 
-const todosReducer = mapReducers(initialState, (handle) => [
+export const todosReducer = mapReducers(initialState, (handle) => [
     handle(addTodo, (state, action) => ({
         ...state,
         isProcessing: false,
@@ -26,10 +26,6 @@ const todosReducer = mapReducers(initialState, (handle) => [
     })),
     handle(removeTodo, (state, action) => ({
         ...state,
-        list: state.list.filter((todo) =>
-            todo.id !== action.payload.id,
-        ),
+        list: state.list.filter((todo) => todo.id !== action.payload.id),
     })),
 ]);
-
-export default todosReducer;

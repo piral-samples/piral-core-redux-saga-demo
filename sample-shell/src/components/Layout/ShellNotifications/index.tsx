@@ -7,6 +7,7 @@ import {
     removeNotification,
 } from '../../../redux/notifications';
 import './style.scss';
+import { Button } from '../../form/Button';
 
 interface ShellNotificationEntryProps {
     entry: NotificationEntry;
@@ -27,13 +28,15 @@ const ShellNotificationEntry = ({ entry }: ShellNotificationEntryProps) => {
     
     return (
         <li className={`shell--notification shell--notification-${entry.type}`}>
-            <div>
+            <div className="shell--notification-content">
                 <div className="shell--notification-title">{entry.title}</div>
                 <div className="shell--notification-body">{entry.text}</div>
             </div>
-            <button onClick={() => dispatch(removeNotification(entry.id))} type="button">
-                x
-            </button>
+            <Button
+                text="x"
+                className="shell--notification-close"
+                onClick={() => dispatch(removeNotification(entry.id))}
+            />
         </li>
     );
 };
@@ -41,7 +44,7 @@ const ShellNotificationEntry = ({ entry }: ShellNotificationEntryProps) => {
 export const ShellNotifications = () => {
     const entries = useSelector(selectNotifications);
 
-    return (
+    return entries.length === 0 ? null : (
         <ul className="shell--notifications">
             {entries.map((entry) => (
                 <ShellNotificationEntry entry={entry} key={entry.id} />

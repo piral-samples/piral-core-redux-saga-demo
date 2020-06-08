@@ -19,12 +19,12 @@ import {
 
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/pages/Dashboard';
-import configureStore from './redux/configureStore';
+import { configureStore } from './redux/configureStore';
 import { extendApi } from './extendApi';
 import { Profile } from './components/pages/Profile';
 import { selectPiletsFetched, selectPilets } from './redux/pilets';
-import LoadingIndicator from './components/LoadingIndicator';
-import ErrorInfo from './components/ErrorInfo';
+import { LoadingIndicator } from './components/LoadingIndicator';
+import { ErrorInfo } from './components/ErrorInfo';
 
 function setupShell(app: PiletApi) {
     app.registerMenu({
@@ -48,9 +48,10 @@ function setupShell(app: PiletApi) {
     });
     app.registerMenu({
         type: 'mainmenu',
-        name: 'google',
-        label: 'Google',
-        href: 'https://www.google.de',
+        name: 'external',
+        label: 'External Link',
+        href: 'https://www.jambit.com',
+        target: '_blank',
     });
     app.registerPage('/', Dashboard);
     app.registerPage('/profile', Profile);

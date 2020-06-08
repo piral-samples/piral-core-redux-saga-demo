@@ -10,7 +10,7 @@ export const ShellSidebar = () => {
 
     return (
         <div className="shell--sidebar">
-            <h2>Our Geeky Sidebar</h2>
+            <h2>Navigation</h2>
             <ul>
                 {entries.map((entry) => (
                     <li className="shell--sidebar-menu-entry">
