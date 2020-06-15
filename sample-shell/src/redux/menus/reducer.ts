@@ -2,7 +2,7 @@ import { mapReducers } from 'tsrux';
 import { PiletMenuEntry } from './types';
 
 import { addMenuEntry, removeMenuEntry } from './actions';
-import { piletSetup } from '../pilets/actions';
+import { unloadPilet } from '../pilets/actions';
 
 const initialState = {
     footer: [] as PiletMenuEntry[],
@@ -22,8 +22,8 @@ export const menusReducer = mapReducers(initialState, (handle) => [
             (entry) => entry.name !== action.payload.name,
         ),
     })),
-    // When a pilet gets setup, we might have leftovers from a pre-existing setup, which we should clear up.
-    handle(piletSetup, (state, action) => ({
+    // When a pilet gets unloaded, we might have leftovers from a pre-existing setup, which we should clear up.
+    handle(unloadPilet, (state, action) => ({
         footer: state.footer.filter((entry) => entry.pilet !== action.payload.name),
         mainmenu: state.mainmenu.filter((entry) => entry.pilet !== action.payload.name),
     })),

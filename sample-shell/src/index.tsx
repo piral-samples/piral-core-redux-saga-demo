@@ -22,11 +22,13 @@ import { Dashboard } from './components/pages/Dashboard';
 import { configureStore } from './redux/configureStore';
 import { extendApi } from './extendApi';
 import { Profile } from './components/pages/Profile';
-import { selectPiletsFetched, selectPilets } from './redux/pilets';
+import { selectPiletsFetched, selectPilets, unloadPilet } from './redux/pilets';
 import { LoadingIndicator } from './components/LoadingIndicator';
 import { ErrorInfo } from './components/ErrorInfo';
+import { IModuleStore } from 'redux-dynamic-modules';
+import { ShellState } from './redux';
 
-function setupShell(app: PiletApi) {
+function setupShell(app: PiletApi, store: IModuleStore<ShellState>) {
     app.registerMenu({
         type: 'footer',
         name: 'legal',
@@ -55,6 +57,9 @@ function setupShell(app: PiletApi) {
     });
     app.registerPage('/', Dashboard);
     app.registerPage('/profile', Profile);
+    app.on('unload-pilet', (e) => {
+        store.dispatch(unloadPilet(e.name));
+    });
 }
 
 // Here we export our own module explicitly, since it's not possible to do this via the "externals" property in the package.json
@@ -81,7 +86,7 @@ function init() {
                     },
                 },
             });
-            setupShell(instance.root);
+            setupShell(instance.root, store);
 
             return <Piral instance={instance} />;
         } catch (error) {
