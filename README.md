@@ -14,9 +14,9 @@ We use [redux-dynamic-modules](https://redux-dynamic-modules.js.org/) to dynamic
 
 - Go into `sample-shell` and execute these commands:
   - `npm ci` => will install dependencies
-  - `npm run build` => will create both a simulator package (in `dist/develop/*.tgz`) and a release build.
+  - `npm run build` => will create both a simulator package (in `dist/emulator/*.tgz`) and a release build.
 - Go into `sample-pilet` and execute these commands:
-  - `npm i ../sample-shell/dist/develop/piral-core-redux-saga-demo-shell-0.11.5.tgz` => installs the simulator package you just build above.
+  - `npm i ../sample-shell/dist/emulator/piral-core-redux-saga-demo-shell-0.11.5.tgz` => installs the simulator package you just build above.
   - `npm run build` => will create a release build.
 
 Normally, you'd publish your simulator package for easier installment, but since this is a demo, it isn't published anywhere.
