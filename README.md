@@ -1,8 +1,15 @@
-# Piral-Core Redux & Saga Demo
+[![Piral Logo](https://github.com/smapiot/piral/raw/develop/docs/assets/logo.png)](https://piral.io)
+
+# [Piral Sample](https://piral.io) &middot; [![GitHub License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/smapiot/piral/blob/main/LICENSE) [![Gitter Chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/piral-io/community)
+
+> Piral-Core Redux & Saga Demo
+
+:zap: A demo of a microfrontend portal based on piral-core and Redux with Saga. 
 
 This is a sample project using [piral-core](https://github.com/smapiot/piral/tree/develop/src/framework/piral-core) in combination with [redux](https://redux.js.org/) for global state and [redux-saga](https://redux-saga.js.org/) for side-effects.
 
 We use [redux-dynamic-modules](https://redux-dynamic-modules.js.org/) to dynamically load reducers and sagas into redux when needed.
+
 **Be aware**, that state added via `<DynamicModuleLoader>` is only available when the `<DynamicModuleLoader>` is actually mounted.
 
 ## Overview
@@ -36,3 +43,7 @@ Normally, you'd publish your simulator package for easier installment, but since
   - run `npm run publish-pilet:fresh` from within the `sample-pilet` directory.
     - This creates a fresh build of the pilet and publishes it on the sample feed service.
   - Open your browser at http://localhost:3000
+
+## License
+
+Piral and this sample code is released using the MIT license. For more information see the [license file](./LICENSE).
