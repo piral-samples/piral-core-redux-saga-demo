@@ -10,6 +10,8 @@ This is a sample project using [piral-core](https://github.com/smapiot/piral/tre
 
 We use [redux-dynamic-modules](https://redux-dynamic-modules.js.org/) to dynamically load reducers and sagas into redux when needed.
 
+You can visit this demo at [core-redux-saga.samples.piral.cloud/](https://core-redux-saga.samples.piral.cloud/).
+
 **Be aware**, that state added via `<DynamicModuleLoader>` is only available when the `<DynamicModuleLoader>` is actually mounted.
 
 ## Overview
